@@ -154,27 +154,52 @@ const App = () => {
 };
 
 const ConsoleLog = ({ loading }) => {
-  const [logs, setLogs] = useState(["> System initialized.", "> Monitoring active.", "> Sensors active."]);
+  const [logs, setLogs] = useState(["> System initialized.", "> Sensors active."]);
   
   useEffect(() => {
-    const messages = ["Status: Stable", "Process: OK", "Analyzing patterns...", "Cloud sync...", "Calibration: OK"];
+    const messages = ["Status: Stable", "Process: OK", "Analyzing...", "Cloud sync...", "Calibration: OK"];
     const interval = setInterval(() => {
       const msg = messages[Math.floor(Math.random() * messages.length)];
-      setLogs(prev => [...prev.slice(-2), `> ${msg}`]);
-    }, 5000);
+      setLogs(prev => [...prev.slice(-1), `> ${msg}`]);
+    }, 6000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    if (loading) setLogs(prev => [...prev, "> Synchronizing data..."]);
+    if (loading) setLogs(prev => [...prev, "> Synchronizing..."]);
   }, [loading]);
 
   return (
-    <div style={{ width: '100%', padding: '15px 20px', backgroundColor: '#f1f5f9', borderTop: '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '0.7rem', color: '#64748b', minHeight: '80px', boxSizing: 'border-box' }}>
-      {logs.map((log, i) => (<div key={i} style={{ opacity: (i + 1) / logs.length, marginBottom: '2px' }}>{log}</div>))}
+    <div style={{ 
+      width: '100%', 
+      padding: '10px 20px', 
+      backgroundColor: '#f1f5f9', 
+      borderTop: '1px solid #e2e8f0', 
+      fontFamily: 'monospace', 
+      fontSize: '0.65rem', 
+      color: '#64748b', 
+      minHeight: '55px', // 高さを以前の約2/3に
+      boxSizing: 'border-box',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-start', // 左寄せ
+      justifyContent: 'center'
+    }}>
+      {logs.map((log, i) => (
+        <div key={i} style={{ opacity: (i + 1) / logs.length, marginBottom: '2px', textAlign: 'left' }}>
+          {log}
+        </div>
+      ))}
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <span style={{ color: '#10b981' }}>{'>'}</span>
-        <span style={{ display: 'inline-block', width: '6px', height: '10px', backgroundColor: '#10b981', marginLeft: '5px', animation: 'blink 1s infinite' }} />
+        <span style={{ 
+          display: 'inline-block', 
+          width: '5px', 
+          height: '10px', 
+          backgroundColor: '#10b981', 
+          marginLeft: '4px', 
+          animation: 'blink 1s infinite' 
+        }} />
       </div>
     </div>
   );
@@ -183,7 +208,7 @@ const ConsoleLog = ({ loading }) => {
 const MiniCard = ({ label, value, unit, color }) => (
   <div style={{ 
     flex: 1, 
-    minWidth: 0, // 横並びを維持するための魔法の指定
+    minWidth: 0, 
     backgroundColor: 'white', 
     padding: '8px', 
     borderRadius: '8px', 
