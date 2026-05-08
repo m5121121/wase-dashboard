@@ -9,7 +9,7 @@ const App = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   
-  // 初期値を今日の日付(yyyy-mm-dd)に設定
+  // 初期値を今日の日付に設定
   const getToday = () => new Date().toISOString().split('T')[0];
   const [startDate, setStartDate] = useState(getToday());
   const [endDate, setEndDate] = useState(getToday());
@@ -105,54 +105,54 @@ const App = () => {
         </ResponsiveContainer>
       </div>
 
-      <ConsoleLog loading={loading} />
+      <ConsoleLog />
     </div>
   );
 };
 
-const ConsoleLog = ({ loading }) => {
-  const [logs, setLogs] = useState(["> Initializing...", "> Sensors OK."]);
+const ConsoleLog = () => {
+  const [logs, setLogs] = useState(["> System initialized.", "> Sensors active."]);
   
   useEffect(() => {
-    const messages = ["Stable", "Active", "Syncing", "OK"];
+    const messages = ["Status: Stable", "Process: OK", "Analyzing...", "Cloud sync...", "Calibration: OK"];
     const interval = setInterval(() => {
       const msg = messages[Math.floor(Math.random() * messages.length)];
       setLogs(prev => [...prev.slice(-1), `> ${msg}`]);
-    }, 7000);
+    }, 6000);
     return () => clearInterval(interval);
   }, []);
 
   return (
     <div style={{ 
       width: '100%', 
-      padding: '5px 20px', 
+      padding: '8px 20px', 
       backgroundColor: '#f1f5f9', 
       borderTop: '1px solid #e2e8f0', 
       fontFamily: 'monospace', 
-      fontSize: '0.6rem', 
-      color: '#94a3b8', 
-      minHeight: '35px', 
+      fontSize: '0.65rem', 
+      color: '#64748b', 
+      minHeight: '45px', 
       boxSizing: 'border-box',
       display: 'flex',
-      alignItems: 'center',
-      gap: '10px'
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      justifyContent: 'center'
     }}>
       {logs.map((log, i) => (
         <div key={i} style={{ 
-          maxWidth: '120px', 
-          overflow: 'hidden', 
-          textOverflow: 'ellipsis', 
-          whiteSpace: 'nowrap',
-          opacity: (i + 1) / logs.length 
+          opacity: (i + 1) / logs.length, 
+          lineHeight: '1.1', // メッセージの間合いを狭めた
+          marginBottom: '1px', 
+          textAlign: 'left' 
         }}>
           {log}
         </div>
       ))}
-      <div style={{ display: 'flex', alignItems: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginTop: '1px' }}>
         <span style={{ color: '#10b981' }}>{'>'}</span>
         <span style={{ 
-          display: 'inline-block', width: '4px', height: '8px', 
-          backgroundColor: '#10b981', marginLeft: '3px', animation: 'blink 1s infinite' 
+          display: 'inline-block', width: '5px', height: '10px', 
+          backgroundColor: '#10b981', marginLeft: '4px', animation: 'blink 1s infinite' 
         }} />
       </div>
     </div>
