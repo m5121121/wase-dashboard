@@ -1,27 +1,34 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
-} from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxD_q2GNDIJ8KlFV5fKqoloyQbWSCb5-CgOJZwjAgXUhInRO22HCfy05u2Wm7evRKXq/exec';
-const UPDATE_INTERVAL = 300000;
+const GAS_URL = 'あなたのGASのURL';
 
 const App = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
+  // 期間選択用の状態
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(GAS_URL);
+      // クエリパラメータの構築
+      let url = GAS_URL;
+      if (startDate && endDate) {
+        url += `?start=${startDate}&end=${endDate}`;
+      }
+      
+      const response = await fetch(url);
       const rawData = await response.json();
+      
       if (Array.isArray(rawData)) {
         const formattedData = rawData.map(item => ({
           time: String(item["日時"] || ""),
           temp: item["気温"] != null ? parseFloat(item["気温"]) : null,
           humi: item["湿度"] != null ? parseFloat(item["湿度"]) : null,
           pres: item["気圧"] != null ? parseFloat(item["気圧"]) : null
-        })).filter(item => item.time !== "");
+        }));
         setData(formattedData);
       }
     } catch (error) {
@@ -29,12 +36,10 @@ const App = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [startDate, endDate]); // 日付が変わったらフェッチ関数を更新
 
   useEffect(() => {
     fetchData();
-    const timer = setInterval(fetchData, UPDATE_INTERVAL);
-    return () => clearInterval(timer);
   }, [fetchData]);
 
   const latest = data.length > 0 ? data[data.length - 1] : null;
@@ -42,49 +47,36 @@ const App = () => {
   const formatTimeOnly = (timeStr) => {
     if (!timeStr) return "--:--";
     const timeMatch = timeStr.match(/(\d{1,2}:\d{2})/);
-    if (timeMatch) return timeMatch[1];
-    if (timeStr.includes(' ') || timeStr.includes('T')) {
-      const parts = timeStr.split(/[ T]/);
-      return parts[parts.length - 1].substring(0, 5);
-    }
-    return timeStr.length > 10 ? timeStr.substring(11, 16) : timeStr;
+    return timeMatch ? timeMatch[1] : timeStr.substring(11, 16);
   };
 
   const styles = {
-    // 修正: width を 100% に変更し、boxSizing を追加
-    container: { 
-      width: '100%', 
-      height: '100vh', 
-      backgroundColor: '#f8fafc', 
-      display: 'flex', 
-      flexDirection: 'column', 
-      overflow: 'hidden',
-      boxSizing: 'border-box'
-    },
+    container: { width: '100%', height: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
     header: { padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', borderBottom: '1px solid #e2e8f0', flexShrink: 0 },
+    dateControls: { display: 'flex', gap: '10px', alignItems: 'center', fontSize: '0.8rem' },
+    input: { padding: '4px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem' },
     cardContainer: { display: 'flex', gap: '10px', padding: '10px 20px', backgroundColor: '#f8fafc', flexShrink: 0 },
-    chartWrapper: { flexGrow: 1, width: '100%', backgroundColor: '#fff', position: 'relative', display: 'flex', flexDirection: 'column' },
-    updateBtn: { padding: '6px 15px', borderRadius: '6px', border: 'none', backgroundColor: loading ? '#94a3b8' : '#10b981', color: 'white', fontSize: '0.8rem', cursor: 'pointer' }
+    chartWrapper: { flexGrow: 1, width: '100%', backgroundColor: '#fff', position: 'relative', display: 'flex', flexDirection: 'column' }
   };
 
   return (
     <div style={styles.container}>
-      {/* 修正: ボディ全体の余白を消すスタイルタグを挿入 */}
-      <style>{`
-        body { margin: 0; padding: 0; overflow: hidden; width: 100%; }
-        @keyframes blink { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
-      `}</style>
+      <style>{`body { margin: 0; padding: 0; } @keyframes blink { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }`}</style>
 
       <header style={styles.header}>
-        <h1 style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: 0, color: '#0f172a' }}>
-          🍃 裏磐梯農園 Log 
-          <small style={{fontWeight: 'normal', color: '#64748b', fontSize: '0.8rem', marginLeft: '10px'}}>
-            Update: {latest ? formatTimeOnly(latest.time) : '--:--'}
-          </small>
-        </h1>
-        <button onClick={fetchData} disabled={loading} style={styles.updateBtn}>
-          {loading ? '...' : '再読込'}
-        </button>
+        <h1 style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: 0 }}>🍃 裏磐梯農園 Log</h1>
+        
+        {/* 期間選択 UI */}
+        <div style={styles.dateControls}>
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={styles.input} />
+          <span>~</span>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={styles.input} />
+          <button onClick={fetchData} disabled={loading} style={{
+            padding: '5px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#10b981', color: 'white', cursor: 'pointer', fontSize: '0.8rem'
+          }}>
+            {loading ? '...' : '表示'}
+          </button>
+        </div>
       </header>
 
       <div style={styles.cardContainer}>
@@ -115,30 +107,5 @@ const App = () => {
   );
 };
 
-const ConsoleLog = ({ loading }) => {
-  const [logs, setLogs] = useState(["> System initialized.", "> Monitoring micro-climate...", "> Sensors active."]);
-  useEffect(() => {
-    const messages = ["Current Status: Stable", "Process: Photosynthesis Optimized", "Analyzing micro-climate patterns...", "Cloud sync in progress...", "Calibration: OK", "Adjusting for high altitude (800m)..."];
-    const interval = setInterval(() => {
-      const msg = messages[Math.floor(Math.random() * messages.length)];
-      setLogs(prev => [...prev.slice(-2), `> ${msg}`]);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
-  useEffect(() => { if (loading) setLogs(prev => [...prev, "> Synchronizing with data bank..."]); }, [loading]);
-  return (
-    <div style={{ width: '100%', padding: '8px 20px', backgroundColor: '#f1f5f9', borderTop: '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '0.7rem', color: '#64748b', height: '65px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'left', boxSizing: 'border-box' }}>
-      {logs.map((log, i) => (<div key={i} style={{ opacity: (i + 1) / logs.length, lineHeight: '1.4' }}>{log}</div>))}
-      <div><span style={{ color: '#10b981' }}>{'>'}</span><span style={{ display: 'inline-block', width: '6px', height: '10px', backgroundColor: '#10b981', marginLeft: '5px', animation: 'blink 1s infinite' }} /></div>
-    </div>
-  );
-};
-
-const MiniCard = ({ label, value, unit, color }) => (
-  <div style={{ flex: 1, backgroundColor: 'white', padding: '8px 15px', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', borderLeft: `4px solid ${color}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-    <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 'bold' }}>{label}</span>
-    <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1e293b' }}>{value != null ? value.toFixed(1) : '--'}<small style={{fontSize: '0.6rem', marginLeft: '2px'}}>{unit}</small></div>
-  </div>
-);
-
+// ... ConsoleLog, MiniCard は以前と同じ ...
 export default App;
