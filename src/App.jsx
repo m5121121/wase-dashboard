@@ -8,8 +8,11 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbxD_q2GNDIJ8KlFV5fKqolo
 const App = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  
+  // 初期値を今日の日付(yyyy-mm-dd)に設定
+  const getToday = () => new Date().toISOString().split('T')[0];
+  const [startDate, setStartDate] = useState(getToday());
+  const [endDate, setEndDate] = useState(getToday());
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -49,60 +52,14 @@ const App = () => {
   };
 
   const styles = {
-    container: { 
-      width: '100%', 
-      minHeight: '100vh', 
-      backgroundColor: '#f8fafc', 
-      display: 'flex', 
-      flexDirection: 'column',
-      boxSizing: 'border-box' 
-    },
-    header: { 
-      padding: '10px 15px', 
-      backgroundColor: '#fff', 
-      borderBottom: '1px solid #e2e8f0',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '8px'
-    },
+    container: { width: '100%', minHeight: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' },
+    header: { padding: '10px 15px', backgroundColor: '#fff', borderBottom: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' },
     headerTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    dateControls: { 
-      display: 'flex', 
-      gap: '5px', 
-      alignItems: 'center',
-      justifyContent: 'center'
-    },
-    input: { 
-      padding: '5px', 
-      borderRadius: '4px', 
-      border: '1px solid #cbd5e1', 
-      fontSize: '0.75rem', 
-      width: '105px' 
-    },
-    cardContainer: { 
-      display: 'flex', 
-      gap: '8px', 
-      padding: '10px 15px', 
-      backgroundColor: '#f8fafc',
-      justifyContent: 'space-between'
-    },
-    chartArea: { 
-      backgroundColor: '#fff', 
-      height: '350px', 
-      width: '100%',
-      borderTop: '1px solid #e2e8f0',
-      borderBottom: '1px solid #e2e8f0'
-    },
-    updateBtn: { 
-      padding: '5px 12px', 
-      borderRadius: '6px', 
-      border: 'none', 
-      backgroundColor: '#10b981', 
-      color: 'white', 
-      fontSize: '0.75rem', 
-      cursor: 'pointer', 
-      fontWeight: 'bold' 
-    }
+    dateControls: { display: 'flex', gap: '5px', alignItems: 'center', justifyContent: 'center' },
+    input: { padding: '5px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.75rem', width: '105px' },
+    cardContainer: { display: 'flex', gap: '8px', padding: '10px 15px', backgroundColor: '#f8fafc', justifyContent: 'space-between' },
+    chartArea: { backgroundColor: '#fff', height: '350px', width: '100%', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' },
+    updateBtn: { padding: '5px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#10b981', color: 'white', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }
   };
 
   return (
@@ -154,51 +111,48 @@ const App = () => {
 };
 
 const ConsoleLog = ({ loading }) => {
-  const [logs, setLogs] = useState(["> System initialized.", "> Sensors active."]);
+  const [logs, setLogs] = useState(["> Initializing...", "> Sensors OK."]);
   
   useEffect(() => {
-    const messages = ["Status: Stable", "Process: OK", "Analyzing...", "Cloud sync...", "Calibration: OK"];
+    const messages = ["Stable", "Active", "Syncing", "OK"];
     const interval = setInterval(() => {
       const msg = messages[Math.floor(Math.random() * messages.length)];
       setLogs(prev => [...prev.slice(-1), `> ${msg}`]);
-    }, 6000);
+    }, 7000);
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    if (loading) setLogs(prev => [...prev, "> Synchronizing..."]);
-  }, [loading]);
 
   return (
     <div style={{ 
       width: '100%', 
-      padding: '10px 20px', 
+      padding: '5px 20px', 
       backgroundColor: '#f1f5f9', 
       borderTop: '1px solid #e2e8f0', 
       fontFamily: 'monospace', 
-      fontSize: '0.65rem', 
-      color: '#64748b', 
-      minHeight: '55px', // 高さを以前の約2/3に
+      fontSize: '0.6rem', 
+      color: '#94a3b8', 
+      minHeight: '35px', 
       boxSizing: 'border-box',
       display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'flex-start', // 左寄せ
-      justifyContent: 'center'
+      alignItems: 'center',
+      gap: '10px'
     }}>
       {logs.map((log, i) => (
-        <div key={i} style={{ opacity: (i + 1) / logs.length, marginBottom: '2px', textAlign: 'left' }}>
+        <div key={i} style={{ 
+          maxWidth: '120px', 
+          overflow: 'hidden', 
+          textOverflow: 'ellipsis', 
+          whiteSpace: 'nowrap',
+          opacity: (i + 1) / logs.length 
+        }}>
           {log}
         </div>
       ))}
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <span style={{ color: '#10b981' }}>{'>'}</span>
         <span style={{ 
-          display: 'inline-block', 
-          width: '5px', 
-          height: '10px', 
-          backgroundColor: '#10b981', 
-          marginLeft: '4px', 
-          animation: 'blink 1s infinite' 
+          display: 'inline-block', width: '4px', height: '8px', 
+          backgroundColor: '#10b981', marginLeft: '3px', animation: 'blink 1s infinite' 
         }} />
       </div>
     </div>
@@ -206,17 +160,7 @@ const ConsoleLog = ({ loading }) => {
 };
 
 const MiniCard = ({ label, value, unit, color }) => (
-  <div style={{ 
-    flex: 1, 
-    minWidth: 0, 
-    backgroundColor: 'white', 
-    padding: '8px', 
-    borderRadius: '8px', 
-    borderLeft: `4px solid ${color}`, 
-    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-    display: 'flex',
-    flexDirection: 'column'
-  }}>
+  <div style={{ flex: 1, minWidth: 0, backgroundColor: 'white', padding: '8px', borderRadius: '8px', borderLeft: `4px solid ${color}`, boxShadow: '0 1px 2px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
     <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden' }}>{label}</span>
     <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#1e293b' }}>
       {value != null ? value.toFixed(1) : '--'}<small style={{fontSize: '0.55rem', marginLeft: '1px'}}>{unit}</small>
