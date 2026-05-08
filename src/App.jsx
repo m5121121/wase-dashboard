@@ -48,65 +48,58 @@ const App = () => {
     return timeMatch ? timeMatch[1] : timeStr.substring(11, 16);
   };
 
-  // スタイル定義の修正
   const styles = {
     container: { 
       width: '100%', 
-      minHeight: '100vh', // 最小高さを100%にし、スクロールを許容
+      minHeight: '100vh', 
       backgroundColor: '#f8fafc', 
       display: 'flex', 
       flexDirection: 'column',
       boxSizing: 'border-box' 
     },
     header: { 
-      padding: '12px 15px', 
+      padding: '10px 15px', 
       backgroundColor: '#fff', 
       borderBottom: '1px solid #e2e8f0',
       display: 'flex',
-      flexDirection: 'column', // スマホでは縦並びを考慮
-      gap: '10px'
+      flexDirection: 'column',
+      gap: '8px'
     },
-    headerTop: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center'
-    },
+    headerTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     dateControls: { 
       display: 'flex', 
       gap: '5px', 
       alignItems: 'center',
-      justifyContent: 'center',
-      flexWrap: 'nowrap' // はみ出さないように
+      justifyContent: 'center'
     },
     input: { 
-      padding: '6px', 
+      padding: '5px', 
       borderRadius: '4px', 
       border: '1px solid #cbd5e1', 
       fontSize: '0.75rem', 
-      width: '110px' // スマホで入り切るサイズ
+      width: '105px' 
     },
     cardContainer: { 
       display: 'flex', 
       gap: '8px', 
-      padding: '10px', 
+      padding: '10px 15px', 
       backgroundColor: '#f8fafc',
-      flexWrap: 'wrap' // スマホで3列が苦しい場合は折り返し
+      justifyContent: 'space-between'
     },
     chartArea: { 
       backgroundColor: '#fff', 
-      padding: '10px 0',
-      height: '350px', // スマホで見やすい高さを固定
+      height: '350px', 
       width: '100%',
       borderTop: '1px solid #e2e8f0',
       borderBottom: '1px solid #e2e8f0'
     },
     updateBtn: { 
-      padding: '6px 12px', 
+      padding: '5px 12px', 
       borderRadius: '6px', 
       border: 'none', 
       backgroundColor: '#10b981', 
       color: 'white', 
-      fontSize: '0.8rem', 
+      fontSize: '0.75rem', 
       cursor: 'pointer', 
       fontWeight: 'bold' 
     }
@@ -115,7 +108,7 @@ const App = () => {
   return (
     <div style={styles.container}>
       <style>{`
-        body { margin: 0; padding: 0; overflow-y: auto !important; } /* スクロールを強制 */
+        body { margin: 0; padding: 0; overflow-y: auto !important; }
         @keyframes blink { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
       `}</style>
 
@@ -123,7 +116,6 @@ const App = () => {
         <div style={styles.headerTop}>
           <h1 style={{ fontSize: '1rem', fontWeight: 'bold', margin: 0, color: '#0f172a' }}>🍃 裏磐梯農園 Log</h1>
         </div>
-        
         <div style={styles.dateControls}>
           <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={styles.input} />
           <span style={{color: '#64748b', fontSize: '0.7rem'}}>~</span>
@@ -142,7 +134,7 @@ const App = () => {
 
       <div style={styles.chartArea}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+          <LineChart data={data} margin={{ top: 15, right: 10, left: -25, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
             <XAxis dataKey="time" fontSize={10} tickFormatter={formatTimeOnly} minTickGap={30} axisLine={false} tickLine={false} />
             <YAxis yAxisId="left" fontSize={10} axisLine={false} tickLine={false} />
@@ -162,36 +154,47 @@ const App = () => {
 };
 
 const ConsoleLog = ({ loading }) => {
-  const [logs, setLogs] = useState(["> System initialized.", "> Monitoring active."]);
+  const [logs, setLogs] = useState(["> System initialized.", "> Monitoring active.", "> Sensors active."]);
+  
   useEffect(() => {
-    const messages = ["Status: Stable", "Photosynthesis Optimized", "Analyzing climate...", "Cloud sync...", "Calibration: OK"];
+    const messages = ["Status: Stable", "Process: OK", "Analyzing patterns...", "Cloud sync...", "Calibration: OK"];
     const interval = setInterval(() => {
       const msg = messages[Math.floor(Math.random() * messages.length)];
-      setLogs(prev => [...prev.slice(-1), `> ${msg}`]); // スマホ用にログ数を絞る
+      setLogs(prev => [...prev.slice(-2), `> ${msg}`]);
     }, 5000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    if (loading) setLogs(prev => [...prev, "> Synchronizing..."]);
+    if (loading) setLogs(prev => [...prev, "> Synchronizing data..."]);
   }, [loading]);
 
   return (
-    <div style={{ width: '100%', padding: '15px 20px', backgroundColor: '#1e293b', color: '#94a3b8', fontFamily: 'monospace', fontSize: '0.7rem', minHeight: '100px', boxSizing: 'border-box' }}>
-      {logs.map((log, i) => (<div key={i} style={{ marginBottom: '4px' }}>{log}</div>))}
+    <div style={{ width: '100%', padding: '15px 20px', backgroundColor: '#f1f5f9', borderTop: '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '0.7rem', color: '#64748b', minHeight: '80px', boxSizing: 'border-box' }}>
+      {logs.map((log, i) => (<div key={i} style={{ opacity: (i + 1) / logs.length, marginBottom: '2px' }}>{log}</div>))}
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <span style={{ color: '#10b981' }}>{'>'}</span>
-        <span style={{ display: 'inline-block', width: '6px', height: '12px', backgroundColor: '#10b981', marginLeft: '5px', animation: 'blink 1s infinite' }} />
+        <span style={{ display: 'inline-block', width: '6px', height: '10px', backgroundColor: '#10b981', marginLeft: '5px', animation: 'blink 1s infinite' }} />
       </div>
     </div>
   );
 };
 
 const MiniCard = ({ label, value, unit, color }) => (
-  <div style={{ flex: '1 1 100px', backgroundColor: 'white', padding: '10px', borderRadius: '8px', borderLeft: `4px solid ${color}`, display: 'flex', flexDirection: 'column', gap: '2px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-    <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 'bold' }}>{label}</span>
-    <div style={{ fontSize: '1rem', fontWeight: '800', color: '#1e293b' }}>
-      {value != null ? value.toFixed(1) : '--'}<small style={{fontSize: '0.6rem', marginLeft: '2px'}}>{unit}</small>
+  <div style={{ 
+    flex: 1, 
+    minWidth: 0, // 横並びを維持するための魔法の指定
+    backgroundColor: 'white', 
+    padding: '8px', 
+    borderRadius: '8px', 
+    borderLeft: `4px solid ${color}`, 
+    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+    display: 'flex',
+    flexDirection: 'column'
+  }}>
+    <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden' }}>{label}</span>
+    <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#1e293b' }}>
+      {value != null ? value.toFixed(1) : '--'}<small style={{fontSize: '0.55rem', marginLeft: '1px'}}>{unit}</small>
     </div>
   </div>
 );
