@@ -39,53 +39,31 @@ const App = () => {
 
   const latest = data.length > 0 ? data[data.length - 1] : null;
 
+  // --- 横軸修正のキモ ---
   const formatTimeOnly = (timeStr) => {
-    if (!timeStr || typeof timeStr !== 'string' || !timeStr.includes(' ')) return "--:--";
-    const parts = timeStr.split(' ');
-    return parts[1] ? parts[1].substring(0, 5) : "--:--";
+    if (!timeStr || typeof timeStr !== 'string') return "--:--";
+    
+    // 1. "2024/05/15 14:10" のようにスペースで区切られている場合
+    if (timeStr.includes(' ')) {
+      const timePart = timeStr.split(' ')[1];
+      return timePart ? timePart.substring(0, 5) : timeStr;
+    }
+    
+    // 2. "14:10:00" のように時刻だけ届いている場合
+    if (timeStr.includes(':')) {
+      return timeStr.substring(0, 5);
+    }
+
+    // 3. それ以外はそのまま出すか、先頭5文字を出す
+    return timeStr.length > 5 ? timeStr.substring(0, 5) : timeStr;
   };
 
   const styles = {
-    container: { 
-      width: '100vw', 
-      height: '100vh', // 画面全体を固定
-      backgroundColor: '#f8fafc', 
-      display: 'flex', 
-      flexDirection: 'column',
-      overflow: 'hidden' // スクロールを抑止
-    },
-    header: { 
-      padding: '10px 20px', 
-      display: 'flex', 
-      justifyContent: 'space-between', 
-      alignItems: 'center', 
-      backgroundColor: '#fff',
-      borderBottom: '1px solid #e2e8f0',
-      flexShrink: 0
-    },
-    cardContainer: { 
-      display: 'flex', 
-      gap: '10px', 
-      padding: '10px 20px',
-      backgroundColor: '#f8fafc',
-      flexShrink: 0
-    },
-    chartWrapper: { 
-      flexGrow: 1, // 残りの高さをすべて使う
-      width: '100%', 
-      backgroundColor: '#fff',
-      padding: '0px',
-      position: 'relative'
-    },
-    updateBtn: { 
-      padding: '6px 15px', 
-      borderRadius: '6px', 
-      border: 'none', 
-      backgroundColor: loading ? '#94a3b8' : '#10b981', 
-      color: 'white', 
-      fontSize: '0.8rem',
-      cursor: 'pointer' 
-    }
+    container: { width: '100vw', height: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+    header: { padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', borderBottom: '1px solid #e2e8f0', flexShrink: 0 },
+    cardContainer: { display: 'flex', gap: '10px', padding: '10px 20px', backgroundColor: '#f8fafc', flexShrink: 0 },
+    chartWrapper: { flexGrow: 1, width: '100%', backgroundColor: '#fff', position: 'relative' },
+    updateBtn: { padding: '6px 15px', borderRadius: '6px', border: 'none', backgroundColor: loading ? '#94a3b8' : '#10b981', color: 'white', fontSize: '0.8rem', cursor: 'pointer' }
   };
 
   return (
@@ -109,26 +87,29 @@ const App = () => {
       </div>
 
       <div style={styles.chartWrapper}>
-        {/* コンテナの高さが不定にならないよう 99% 程度に設定 */}
         <ResponsiveContainer width="100%" height="95%">
-          <LineChart data={data} margin={{ top: 20, right: 10, left: -25, bottom: 5 }}>
+          <LineChart data={data} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
             <XAxis 
               dataKey="time" 
               fontSize={11} 
-              tickFormatter={(str) => formatTimeOnly(str)} 
-              minTickGap={40}
+              tickFormatter={formatTimeOnly} 
+              minTickGap={50}
               axisLine={false}
+              tickLine={false}
             />
             <YAxis yAxisId="left" fontSize={11} axisLine={false} tickLine={false} />
             <YAxis yAxisId="right" orientation="right" fontSize={11} axisLine={false} tickLine={false} domain={['auto', 'auto']} />
             
-            <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+            <Tooltip 
+              isAnimationActive={false}
+              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
+            />
             <Legend verticalAlign="top" height={30} align="right" iconType="circle" />
             
-            <Line yAxisId="left" type="monotone" dataKey="temp" stroke="#f97316" name="気温" strokeWidth={2.5} dot={false} animationDuration={400} isAnimationActive={true} />
-            <Line yAxisId="left" type="monotone" dataKey="humi" stroke="#8b5cf6" name="湿度" strokeWidth={2.5} dot={false} animationDuration={400} isAnimationActive={true} />
-            <Line yAxisId="right" type="monotone" dataKey="pres" stroke="#0ea5e9" name="気圧" strokeWidth={2.5} dot={false} animationDuration={400} isAnimationActive={true} />
+            <Line yAxisId="left" type="monotone" dataKey="temp" stroke="#f97316" name="気温" strokeWidth={2.5} dot={false} animationDuration={400} />
+            <Line yAxisId="left" type="monotone" dataKey="humi" stroke="#8b5cf6" name="湿度" strokeWidth={2.5} dot={false} animationDuration={400} />
+            <Line yAxisId="right" type="monotone" dataKey="pres" stroke="#0ea5e9" name="気圧" strokeWidth={2.5} dot={false} animationDuration={400} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -138,16 +119,9 @@ const App = () => {
 
 const MiniCard = ({ label, value, unit, color }) => (
   <div style={{
-    flex: 1,
-    backgroundColor: 'white',
-    padding: '8px 15px',
-    borderRadius: '8px',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-    borderLeft: `4px solid ${color}`,
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    minWidth: '100px'
+    flex: 1, backgroundColor: 'white', padding: '8px 15px', borderRadius: '8px',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.05)', borderLeft: `4px solid ${color}`,
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center', minWidth: '100px'
   }}>
     <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 'bold' }}>{label}</span>
     <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1e293b' }}>
