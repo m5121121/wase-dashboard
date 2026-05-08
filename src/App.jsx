@@ -17,7 +17,7 @@ const App = () => {
       const rawData = await response.json();
       if (Array.isArray(rawData)) {
         const formattedData = rawData.map(item => ({
-          time: String(item["日時"] || ""), // 強制的に文字列化
+          time: String(item["日時"] || ""),
           temp: item["気温"] != null ? parseFloat(item["気温"]) : null,
           humi: item["湿度"] != null ? parseFloat(item["湿度"]) : null,
           pres: item["気圧"] != null ? parseFloat(item["気圧"]) : null
@@ -39,29 +39,28 @@ const App = () => {
 
   const latest = data.length > 0 ? data[data.length - 1] : null;
 
-  // --- 時刻抽出ロジックを強化 ---
   const formatTimeOnly = (timeStr) => {
     if (!timeStr) return "--:--";
-    
-    // 1. "14:10:00" や "14:10" というパターンを検索
     const timeMatch = timeStr.match(/(\d{1,2}:\d{2})/);
-    if (timeMatch) {
-      return timeMatch[1]; // 見つかった "HH:mm" を返す
-    }
-
-    // 2. もし ":" が含まれない場合、文字列の末尾から時刻らしき場所を推測
+    if (timeMatch) return timeMatch[1];
     if (timeStr.includes(' ') || timeStr.includes('T')) {
       const parts = timeStr.split(/[ T]/);
-      const lastPart = parts[parts.length - 1];
-      return lastPart.substring(0, 5);
+      return parts[parts.length - 1].substring(0, 5);
     }
-
-    // 3. どうしてもダメな場合は先頭を避けて後ろの方を出す
     return timeStr.length > 10 ? timeStr.substring(11, 16) : timeStr;
   };
 
   const styles = {
-    container: { width: '100vw', height: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+    // 修正: width を 100% に変更し、boxSizing を追加
+    container: { 
+      width: '100%', 
+      height: '100vh', 
+      backgroundColor: '#f8fafc', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      overflow: 'hidden',
+      boxSizing: 'border-box'
+    },
     header: { padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', borderBottom: '1px solid #e2e8f0', flexShrink: 0 },
     cardContainer: { display: 'flex', gap: '10px', padding: '10px 20px', backgroundColor: '#f8fafc', flexShrink: 0 },
     chartWrapper: { flexGrow: 1, width: '100%', backgroundColor: '#fff', position: 'relative', display: 'flex', flexDirection: 'column' },
@@ -70,6 +69,12 @@ const App = () => {
 
   return (
     <div style={styles.container}>
+      {/* 修正: ボディ全体の余白を消すスタイルタグを挿入 */}
+      <style>{`
+        body { margin: 0; padding: 0; overflow: hidden; width: 100%; }
+        @keyframes blink { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+      `}</style>
+
       <header style={styles.header}>
         <h1 style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: 0, color: '#0f172a' }}>
           🍃 裏磐梯農園 Log 
@@ -93,14 +98,7 @@ const App = () => {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis 
-                dataKey="time" 
-                fontSize={11} 
-                tickFormatter={formatTimeOnly} 
-                minTickGap={50} 
-                axisLine={false} 
-                tickLine={false} 
-              />
+              <XAxis dataKey="time" fontSize={11} tickFormatter={formatTimeOnly} minTickGap={50} axisLine={false} tickLine={false} />
               <YAxis yAxisId="left" fontSize={11} axisLine={false} tickLine={false} />
               <YAxis yAxisId="right" orientation="right" fontSize={11} axisLine={false} tickLine={false} domain={['auto', 'auto']} />
               <Tooltip isAnimationActive={false} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
@@ -111,7 +109,6 @@ const App = () => {
             </LineChart>
           </ResponsiveContainer>
         </div>
-
         <ConsoleLog loading={loading} />
       </div>
     </div>
@@ -119,61 +116,28 @@ const App = () => {
 };
 
 const ConsoleLog = ({ loading }) => {
-  const [logs, setLogs] = useState([
-    "> System initialized.",
-    "> Monitoring micro-climate...",
-    "> Sensors active."
-  ]);
-
+  const [logs, setLogs] = useState(["> System initialized.", "> Monitoring micro-climate...", "> Sensors active."]);
   useEffect(() => {
-    const messages = [
-      "Current Status: Stable",
-      "Process: Photosynthesis Optimized",
-      "Analyzing micro-climate patterns...",
-      "Cloud sync in progress...",
-      "Calibration: OK",
-      "Adjusting for high altitude (800m)..."
-    ];
-    
+    const messages = ["Current Status: Stable", "Process: Photosynthesis Optimized", "Analyzing micro-climate patterns...", "Cloud sync in progress...", "Calibration: OK", "Adjusting for high altitude (800m)..."];
     const interval = setInterval(() => {
       const msg = messages[Math.floor(Math.random() * messages.length)];
       setLogs(prev => [...prev.slice(-2), `> ${msg}`]);
     }, 5000);
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    if (loading) setLogs(prev => [...prev, "> Synchronizing with data bank..."]);
-  }, [loading]);
-
+  useEffect(() => { if (loading) setLogs(prev => [...prev, "> Synchronizing with data bank..."]); }, [loading]);
   return (
-    <div style={{
-      width: '100%', padding: '8px 20px', backgroundColor: '#f1f5f9', borderTop: '1px solid #e2e8f0',
-      fontFamily: 'monospace', fontSize: '0.7rem', color: '#64748b', height: '65px',
-      display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'left', boxSizing: 'border-box'
-    }}>
-      {logs.map((log, i) => (
-        <div key={i} style={{ opacity: (i + 1) / logs.length, lineHeight: '1.4' }}>{log}</div>
-      ))}
-      <div>
-        <span style={{ color: '#10b981' }}>{'>'}</span>
-        <span style={{ display: 'inline-block', width: '6px', height: '10px', backgroundColor: '#10b981', marginLeft: '5px', animation: 'blink 1s infinite' }} />
-      </div>
-      <style>{`@keyframes blink { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }`}</style>
+    <div style={{ width: '100%', padding: '8px 20px', backgroundColor: '#f1f5f9', borderTop: '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '0.7rem', color: '#64748b', height: '65px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'left', boxSizing: 'border-box' }}>
+      {logs.map((log, i) => (<div key={i} style={{ opacity: (i + 1) / logs.length, lineHeight: '1.4' }}>{log}</div>))}
+      <div><span style={{ color: '#10b981' }}>{'>'}</span><span style={{ display: 'inline-block', width: '6px', height: '10px', backgroundColor: '#10b981', marginLeft: '5px', animation: 'blink 1s infinite' }} /></div>
     </div>
   );
 };
 
 const MiniCard = ({ label, value, unit, color }) => (
-  <div style={{
-    flex: 1, backgroundColor: 'white', padding: '8px 15px', borderRadius: '8px',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.05)', borderLeft: `4px solid ${color}`,
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-  }}>
+  <div style={{ flex: 1, backgroundColor: 'white', padding: '8px 15px', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', borderLeft: `4px solid ${color}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
     <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 'bold' }}>{label}</span>
-    <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1e293b' }}>
-      {value != null ? value.toFixed(1) : '--'}<small style={{fontSize: '0.6rem', marginLeft: '2px'}}>{unit}</small>
-    </div>
+    <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1e293b' }}>{value != null ? value.toFixed(1) : '--'}<small style={{fontSize: '0.6rem', marginLeft: '2px'}}>{unit}</small></div>
   </div>
 );
 
