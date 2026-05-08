@@ -17,7 +17,7 @@ const App = () => {
       const rawData = await response.json();
       if (Array.isArray(rawData)) {
         const formattedData = rawData.map(item => ({
-          time: item["日時"] || "",
+          time: String(item["日時"] || ""), // 強制的に文字列化
           temp: item["気温"] != null ? parseFloat(item["気温"]) : null,
           humi: item["湿度"] != null ? parseFloat(item["湿度"]) : null,
           pres: item["気圧"] != null ? parseFloat(item["気圧"]) : null
@@ -39,11 +39,25 @@ const App = () => {
 
   const latest = data.length > 0 ? data[data.length - 1] : null;
 
+  // --- 時刻抽出ロジックを強化 ---
   const formatTimeOnly = (timeStr) => {
-    if (!timeStr || typeof timeStr !== 'string') return "--:--";
-    if (timeStr.includes(' ')) return timeStr.split(' ')[1].substring(0, 5);
-    if (timeStr.includes(':')) return timeStr.substring(0, 5);
-    return timeStr.substring(0, 5);
+    if (!timeStr) return "--:--";
+    
+    // 1. "14:10:00" や "14:10" というパターンを検索
+    const timeMatch = timeStr.match(/(\d{1,2}:\d{2})/);
+    if (timeMatch) {
+      return timeMatch[1]; // 見つかった "HH:mm" を返す
+    }
+
+    // 2. もし ":" が含まれない場合、文字列の末尾から時刻らしき場所を推測
+    if (timeStr.includes(' ') || timeStr.includes('T')) {
+      const parts = timeStr.split(/[ T]/);
+      const lastPart = parts[parts.length - 1];
+      return lastPart.substring(0, 5);
+    }
+
+    // 3. どうしてもダメな場合は先頭を避けて後ろの方を出す
+    return timeStr.length > 10 ? timeStr.substring(11, 16) : timeStr;
   };
 
   const styles = {
@@ -79,19 +93,25 @@ const App = () => {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="time" fontSize={11} tickFormatter={formatTimeOnly} minTickGap={50} axisLine={false} tickLine={false} />
+              <XAxis 
+                dataKey="time" 
+                fontSize={11} 
+                tickFormatter={formatTimeOnly} 
+                minTickGap={50} 
+                axisLine={false} 
+                tickLine={false} 
+              />
               <YAxis yAxisId="left" fontSize={11} axisLine={false} tickLine={false} />
               <YAxis yAxisId="right" orientation="right" fontSize={11} axisLine={false} tickLine={false} domain={['auto', 'auto']} />
               <Tooltip isAnimationActive={false} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
               <Legend verticalAlign="top" height={30} align="right" iconType="circle" />
-              <Line yAxisId="left" type="monotone" dataKey="temp" stroke="#f97316" name="気温" strokeWidth={2.5} dot={false} animationDuration={400} />
-              <Line yAxisId="left" type="monotone" dataKey="humi" stroke="#8b5cf6" name="湿度" strokeWidth={2.5} dot={false} animationDuration={400} />
-              <Line yAxisId="right" type="monotone" dataKey="pres" stroke="#0ea5e9" name="気圧" strokeWidth={2.5} dot={false} animationDuration={400} />
+              <Line yAxisId="left" type="monotone" dataKey="temp" stroke="#f97316" name="気温" strokeWidth={2.5} dot={false} isAnimationActive={false} />
+              <Line yAxisId="left" type="monotone" dataKey="humi" stroke="#8b5cf6" name="湿度" strokeWidth={2.5} dot={false} isAnimationActive={false} />
+              <Line yAxisId="right" type="monotone" dataKey="pres" stroke="#0ea5e9" name="気圧" strokeWidth={2.5} dot={false} isAnimationActive={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
-        {/* システムログセクション (最下部に配置) */}
         <ConsoleLog loading={loading} />
       </div>
     </div>
@@ -117,7 +137,7 @@ const ConsoleLog = ({ loading }) => {
     
     const interval = setInterval(() => {
       const msg = messages[Math.floor(Math.random() * messages.length)];
-      setLogs(prev => [...prev.slice(-2), `> ${msg}`]); // 直近3行を表示
+      setLogs(prev => [...prev.slice(-2), `> ${msg}`]);
     }, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -128,19 +148,9 @@ const ConsoleLog = ({ loading }) => {
 
   return (
     <div style={{
-      width: '100%',
-      padding: '8px 20px',
-      backgroundColor: '#f1f5f9',
-      borderTop: '1px solid #e2e8f0',
-      fontFamily: 'monospace',
-      fontSize: '0.7rem',
-      color: '#64748b',
-      height: '65px',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      textAlign: 'left', // 左寄せ
-      boxSizing: 'border-box'
+      width: '100%', padding: '8px 20px', backgroundColor: '#f1f5f9', borderTop: '1px solid #e2e8f0',
+      fontFamily: 'monospace', fontSize: '0.7rem', color: '#64748b', height: '65px',
+      display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'left', boxSizing: 'border-box'
     }}>
       {logs.map((log, i) => (
         <div key={i} style={{ opacity: (i + 1) / logs.length, lineHeight: '1.4' }}>{log}</div>
