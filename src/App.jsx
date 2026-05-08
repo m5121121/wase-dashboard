@@ -48,11 +48,11 @@ const App = () => {
   const styles = {
     container: { 
       width: '100vw', 
-      minHeight: '100vh', 
+      height: '100vh', // 画面全体を固定
       backgroundColor: '#f8fafc', 
       display: 'flex', 
       flexDirection: 'column',
-      overflowX: 'hidden'
+      overflow: 'hidden' // スクロールを抑止
     },
     header: { 
       padding: '10px 20px', 
@@ -60,20 +60,22 @@ const App = () => {
       justifyContent: 'space-between', 
       alignItems: 'center', 
       backgroundColor: '#fff',
-      borderBottom: '1px solid #e2e8f0'
+      borderBottom: '1px solid #e2e8f0',
+      flexShrink: 0
     },
-    title: { fontSize: '1.2rem', fontWeight: 'bold', color: '#0f172a', margin: 0 },
     cardContainer: { 
       display: 'flex', 
       gap: '10px', 
       padding: '10px 20px',
-      backgroundColor: '#f8fafc'
+      backgroundColor: '#f8fafc',
+      flexShrink: 0
     },
     chartWrapper: { 
-      flexGrow: 1, 
+      flexGrow: 1, // 残りの高さをすべて使う
       width: '100%', 
       backgroundColor: '#fff',
-      padding: '0px' // 余白を徹底排除
+      padding: '0px',
+      position: 'relative'
     },
     updateBtn: { 
       padding: '6px 15px', 
@@ -89,23 +91,27 @@ const App = () => {
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>🍃 裏磐梯農園 Log <small style={{fontWeight: 'normal', color: '#64748b', fontSize: '0.8rem', marginLeft: '10px'}}>Update: {latest ? formatTimeOnly(latest.time) : '--:--'}</small></h1>
+        <h1 style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: 0 }}>
+          🍃 裏磐梯農園 Log 
+          <small style={{fontWeight: 'normal', color: '#64748b', fontSize: '0.8rem', marginLeft: '10px'}}>
+            Update: {latest ? formatTimeOnly(latest.time) : '--:--'}
+          </small>
+        </h1>
         <button onClick={fetchData} disabled={loading} style={styles.updateBtn}>
           {loading ? '...' : '再読込'}
         </button>
       </header>
 
-      {/* 小型化した横並びカード */}
       <div style={styles.cardContainer}>
         <MiniCard label="気温" value={latest?.temp} unit="℃" color="#f97316" />
         <MiniCard label="湿度" value={latest?.humi} unit="%" color="#8b5cf6" />
         <MiniCard label="気圧" value={latest?.pres} unit="hPa" color="#0ea5e9" />
       </div>
 
-      {/* 最大化したグラフエリア */}
       <div style={styles.chartWrapper}>
-        <ResponsiveContainer width="100%" height="90%">
-          <LineChart data={data} margin={{ top: 20, right: 10, left: -25, bottom: 0 }}>
+        {/* コンテナの高さが不定にならないよう 99% 程度に設定 */}
+        <ResponsiveContainer width="100%" height="95%">
+          <LineChart data={data} margin={{ top: 20, right: 10, left: -25, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
             <XAxis 
               dataKey="time" 
@@ -120,9 +126,9 @@ const App = () => {
             <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
             <Legend verticalAlign="top" height={30} align="right" iconType="circle" />
             
-            <Line yAxisId="left" type="monotone" dataKey="temp" stroke="#f97316" name="気温" strokeWidth={2.5} dot={false} animationDuration={400} />
-            <Line yAxisId="left" type="monotone" dataKey="humi" stroke="#8b5cf6" name="湿度" strokeWidth={2.5} dot={false} animationDuration={400} />
-            <Line yAxisId="right" type="monotone" dataKey="pres" stroke="#0ea5e9" name="気圧" strokeWidth={2.5} dot={false} animationDuration={400} />
+            <Line yAxisId="left" type="monotone" dataKey="temp" stroke="#f97316" name="気温" strokeWidth={2.5} dot={false} animationDuration={400} isAnimationActive={true} />
+            <Line yAxisId="left" type="monotone" dataKey="humi" stroke="#8b5cf6" name="湿度" strokeWidth={2.5} dot={false} animationDuration={400} isAnimationActive={true} />
+            <Line yAxisId="right" type="monotone" dataKey="pres" stroke="#0ea5e9" name="気圧" strokeWidth={2.5} dot={false} animationDuration={400} isAnimationActive={true} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -130,23 +136,22 @@ const App = () => {
   );
 };
 
-// 小型カードコンポーネント
 const MiniCard = ({ label, value, unit, color }) => (
   <div style={{
     flex: 1,
     backgroundColor: 'white',
     padding: '8px 15px',
     borderRadius: '8px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
     borderLeft: `4px solid ${color}`,
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    minWidth: '120px'
+    minWidth: '100px'
   }}>
-    <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold' }}>{label}</span>
-    <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#1e293b' }}>
-      {value != null ? value.toFixed(1) : '--'}<small style={{fontSize: '0.7rem', marginLeft: '2px', fontWeight: 'normal'}}>{unit}</small>
+    <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 'bold' }}>{label}</span>
+    <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1e293b' }}>
+      {value != null ? value.toFixed(1) : '--'}<small style={{fontSize: '0.6rem', marginLeft: '2px'}}>{unit}</small>
     </div>
   </div>
 );
