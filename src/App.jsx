@@ -64,10 +64,10 @@ const App = () => {
   const latest = data.length > 0 ? data[data.length - 1] : null;
 
   const styles = {
-    container: { width: '100%', minHeight: '100vh', backgroundColor: '#f1f5f9', display: 'flex', flexDirection: 'column' },
+    container: { width: '100%', minHeight: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column' },
     header: { 
-      position: 'relative', height: '160px', display: 'flex', flexDirection: 'column', 
-      justifyContent: 'flex-end', padding: '0 24px 24px 24px', overflow: 'hidden', color: '#fff'
+      position: 'relative', height: '140px', display: 'flex', flexDirection: 'column', 
+      justifyContent: 'flex-end', padding: '0 24px 20px 24px', overflow: 'hidden', color: '#fff'
     },
     headerBg: {
       position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
@@ -82,7 +82,7 @@ const App = () => {
     headerContent: { position: 'relative', zIndex: 3, textShadow: '0 2px 4px rgba(0,0,0,0.3)' },
     datePanel: { backgroundColor: '#fff', padding: '12px', display: 'flex', gap: '8px', justifyContent: 'center', borderBottom: '1px solid #e2e8f0' },
     input: { padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.8rem', width: '110px' },
-    cardContainer: { display: 'flex', gap: '10px', padding: '16px', backgroundColor: '#f1f5f9' },
+    cardContainer: { display: 'flex', gap: '10px', padding: '12px 16px', backgroundColor: '#f8fafc' },
     chartArea: { backgroundColor: '#fff', height: '340px', width: '100%', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' },
     updateBtn: { padding: '6px 16px', borderRadius: '8px', border: 'none', backgroundColor: '#10b981', color: 'white', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold' }
   };
@@ -93,7 +93,7 @@ const App = () => {
         <div style={styles.headerBg} />
         <div style={styles.overlay} />
         <div style={styles.headerContent}>
-          <h1 style={{ fontSize: '1.6rem', fontWeight: '900', margin: 0, letterSpacing: '0.02em' }}>🍃 裏磐梯農園 Log</h1>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: '900', margin: 0 }}>🍃 裏磐梯農園 Log</h1>
           <div style={{ fontSize: '0.75rem', opacity: 0.9, marginTop: '4px' }}>
              {latest ? `${latest.time.substring(0, 10)} ${latest.time.substring(11, 16)} 更新` : '--'}
           </div>
@@ -131,9 +131,10 @@ const App = () => {
         ) : <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>データなし</div>}
       </div>
 
-      {/* 寒暖差セクション */}
+      {/* 寒暖差ページ（スクロール用セクション） */}
       <YesterdayInsight data={data} />
 
+      {/* 旧システムログ */}
       <ConsoleLog />
     </div>
   );
@@ -149,7 +150,11 @@ const YesterdayInsight = ({ data }) => {
   const yesterdayStr = getYesterdayDate();
   const yesterdayRows = data.filter(d => d.time.startsWith(yesterdayStr));
 
-  if (yesterdayRows.length === 0) return null;
+  if (yesterdayRows.length === 0) return (
+    <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '0.8rem', backgroundColor: '#fff' }}>
+      昨日のデータが不足しているため解析できません
+    </div>
+  );
 
   const temps = yesterdayRows.map(r => r.temp);
   const maxTemp = Math.max(...temps);
@@ -158,90 +163,53 @@ const YesterdayInsight = ({ data }) => {
   const avgTemp = temps.reduce((a, b) => a + b, 0) / temps.length;
 
   const styles = {
-    section: { padding: '32px 20px', backgroundColor: '#fff', borderTop: '1px solid #e2e8f0' },
-    title: { fontSize: '1rem', fontWeight: '800', color: '#1e293b', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' },
-    grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' },
-    mainCard: { 
-      gridColumn: '1 / span 2', backgroundColor: '#f8fafc', padding: '24px', borderRadius: '16px',
-      textAlign: 'center', border: '1px solid #e2e8f0', marginBottom: '10px'
-    },
-    diffValue: { fontSize: '2.8rem', fontWeight: '900', color: diff > 10 ? '#ef4444' : '#334155', margin: '4px 0', letterSpacing: '-0.05em' },
-    barContainer: { height: '10px', width: '100%', backgroundColor: '#e2e8f0', borderRadius: '5px', marginTop: '20px', position: 'relative' },
-    barRange: { position: 'absolute', height: '100%', backgroundColor: '#f97316', borderRadius: '5px' },
-    adviceBox: { marginTop: '24px', padding: '16px', backgroundColor: '#f0fdf4', borderRadius: '12px', fontSize: '0.8rem', color: '#166534', lineHeight: '1.6', border: '1px solid #dcfce7' }
+    section: { padding: '30px 20px', backgroundColor: '#fff', borderTop: '8px solid #f1f5f9' },
+    title: { fontSize: '0.9rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '16px' },
+    mainCard: { backgroundColor: '#f8fafc', padding: '20px', borderRadius: '16px', textAlign: 'center', border: '1px solid #e2e8f0' },
+    diffValue: { fontSize: '2.5rem', fontWeight: '900', color: diff > 10 ? '#ef4444' : '#334155', margin: '4px 0' }
   };
 
   return (
     <div style={styles.section}>
-      <div style={styles.title}>
-        <span style={{ fontSize: '1.2rem' }}>📈</span> 昨日の寒暖差レポート
-      </div>
-      
-      <div style={styles.grid}>
-        <div style={styles.mainCard}>
-          <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase' }}>Daily Temp Variation</div>
-          <div style={styles.diffValue}>{diff.toFixed(1)}<span style={{ fontSize: '1.2rem', marginLeft: '4px' }}>℃</span></div>
-          <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{yesterdayStr} (Yesterday)</div>
-          
-          <div style={styles.barContainer}>
-            <div style={{
-              ...styles.barRange,
-              left: `${((minTemp + 10) / 50) * 100}%`, // -10度〜40度のスケールで計算
-              width: `${(diff / 50) * 100}%`
-            }} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginTop: '10px', color: '#64748b', fontWeight: '600' }}>
-            <span>Min: {minTemp.toFixed(1)}℃</span>
-            <span>Max: {maxTemp.toFixed(1)}℃</span>
-          </div>
+      <div style={styles.title}>📊 昨日の寒暖差レポート</div>
+      <div style={styles.mainCard}>
+        <div style={{ fontSize: '0.7rem', color: '#64748b' }}>TEMPERATURE DIFF</div>
+        <div style={styles.diffValue}>{diff.toFixed(1)}℃</div>
+        <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{yesterdayStr} の最大振れ幅</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginTop: '15px', color: '#64748b', borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
+          <span>最小: {minTemp.toFixed(1)}℃</span>
+          <span>平均: {avgTemp.toFixed(1)}℃</span>
+          <span>最大: {maxTemp.toFixed(1)}℃</span>
         </div>
-
-        <SmallStat label="平均気温" value={avgTemp.toFixed(1)} unit="℃" icon="🌡️" />
-        <SmallStat label="データ数" value={yesterdayRows.length} unit="pts" icon="📍" />
       </div>
-      
-      <div style={styles.adviceBox}>
-        <div style={{ fontWeight: 'bold', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <span>🍃</span> 裏磐梯農園アドバイス
-        </div>
-        {diff > 10 ? 
-          "昨日、裏磐梯では大きな寒暖差が記録されました。この温度変化が野菜の旨味を凝縮させます。夜間の冷え込みに合わせ、トンネル栽培の換気調節を検討してください。" : 
-          "昨日は比較的穏やかな一日でした。安定した環境ですが、土壌の乾燥具合に注意し、ルーチンの潅水作業を丁寧に行いましょう。"}
+      <div style={{ marginTop: '15px', padding: '12px', backgroundColor: '#f0fdf4', borderRadius: '8px', fontSize: '0.75rem', color: '#166534', lineHeight: '1.5' }}>
+        <strong>🌱 農業メモ:</strong> {diff > 10 ? "10度以上の寒暖差があります。糖度アップのチャンスです。" : "安定した気温です。計画的な作業に適しています。"}
       </div>
     </div>
   );
 };
 
-const SmallStat = ({ label, value, unit, icon }) => (
-  <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-    <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 'bold' }}>{icon} {label}</div>
-    <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#1e293b' }}>
-      {value}<span style={{ fontSize: '0.75rem', marginLeft: '3px', fontWeight: 'normal' }}>{unit}</span>
-    </div>
-  </div>
-);
-
 const ConsoleLog = () => {
-  const [logs, setLogs] = useState(["> System standby."]);
+  const [logs, setLogs] = useState(["> System online."]);
   useEffect(() => {
-    const msgs = ["System OK", "Cloud Linked", "Reporting"];
+    const msgs = ["Stable", "Syncing", "Ready"];
     const itv = setInterval(() => {
       setLogs(p => [...p.slice(-1), `> ${msgs[Math.floor(Math.random()*msgs.length)]}`]);
-    }, 9000);
+    }, 8000);
     return () => clearInterval(itv);
   }, []);
   return (
-    <div style={{ width: '100%', padding: '12px 24px', backgroundColor: '#f1f5f9', borderTop: '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '0.65rem', color: '#94a3b8', minHeight: '50px' }}>
-      {logs.map((l, i) => <div key={i} style={{ opacity: (i+1)/logs.length }}>{l}</div>)}
+    <div style={{ width: '100%', padding: '8px 24px', backgroundColor: '#f1f5f9', borderTop: '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '0.65rem', color: '#64748b', minHeight: '40px' }}>
+      {logs.map((l, i) => <div key={i} style={{ opacity: (i+1)/logs.length, lineHeight: '1.1' }}>{l}</div>)}
     </div>
   );
 };
 
 const MiniCard = ({ label, value, unit, color }) => (
-  <div style={{ flex: 1, backgroundColor: 'white', padding: '12px 10px', borderRadius: '12px', borderLeft: `5px solid ${color}`, boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}>
-    <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 'bold', marginBottom: '4px' }}>{label}</div>
-    <div style={{ fontSize: '1.2rem', fontWeight: '900', color: '#1e293b', display: 'flex', alignItems: 'baseline' }}>
-      {value != null ? value.toFixed(1) : '--'}<span style={{ fontSize: '0.65rem', marginLeft: '2px', fontWeight: '600' }}>{unit}</span>
+  <div style={{ flex: 1, backgroundColor: 'white', padding: '10px 8px', borderRadius: '10px', borderLeft: `4px solid ${color}`, boxShadow: '0 2px 4px rgba(0,0,0,0.04)' }}>
+    <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 'bold' }}>{label}</div>
+    <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1e293b' }}>
+      {value != null ? value.toFixed(1) : '--'}<small style={{ fontSize: '0.6rem' }}>{unit}</small>
     </div>
   </div>
 );
