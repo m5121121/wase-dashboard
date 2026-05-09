@@ -10,8 +10,8 @@ const CornProduct = () => {
 
   /**
    * 1. 「昨日」の日付を計算
-   * スプレッドシート(image_6930d5.png)のフォーマット "YYYY/MM/DD HH:mm:ss" に合わせ、
-   * 前方一致でヒットするようにスラッシュ区切り ("YYYY/MM/DD") で生成します。
+   * 現状のGASロジック (yyyy-MM-dd での文字列比較) に合わせるため、
+   * ハイフン区切りで生成します。
    */
   const yesterdayString = useMemo(() => {
     const d = new Date();
@@ -19,18 +19,16 @@ const CornProduct = () => {
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
-    // ハイフン(-)からスラッシュ(/)へ変更
-    return `${yyyy}/${mm}/${dd}`;
+    // GAS側の Utilities.formatDate(..., "yyyy-MM-dd") と一致させる
+    return `${yyyy}-${mm}-${dd}`;
   }, []);
 
   /**
    * 2. カスタムフックに「昨日」を注入
-   * これにより、GASへのリクエストURLが exec?start=2026/05/09... となり、
-   * シート内の文字列と一致するようになります。
    */
   const { data, stats, loading } = useSensorData(yesterdayString, yesterdayString);
 
-  // ローディング表示（データが空かつ読込中の場合）
+  // ローディング表示
   if (loading && data.length === 0) {
     return <div style={{ textAlign: 'center', padding: '100px', fontSize: '1.2rem', color: '#666' }}>昨日の栽培データを読み込み中...</div>;
   }
@@ -91,7 +89,7 @@ const CornProduct = () => {
           border: '1px solid #eee' 
         }}>
           
-          {/* 寒暖差バッジ（NaN対策：データがある時のみ表示） */}
+          {/* 寒暖差バッジ */}
           <div style={{ 
             position: 'absolute', top: '-20px', right: '40px', textAlign: 'right', zIndex: 10,
             backgroundColor: '#ea580c', color: 'white', padding: '15px 25px', borderRadius: '12px', 
@@ -163,7 +161,7 @@ const CornProduct = () => {
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', backgroundColor: '#f8fafc', borderRadius: '10px' }}>
+              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px dashed #cbd5e1' }}>
                 指定された日付（{yesterdayString}）のデータが見つかりませんでした。
               </div>
             )}
