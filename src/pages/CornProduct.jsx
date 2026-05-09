@@ -8,14 +8,20 @@ const CornProduct = () => {
   const baseUrl = import.meta.env.BASE_URL || "/";
   const heroImagePath = `${baseUrl}corn-hero.jpg`;
 
-  // 明示的に「昨日」の日付を計算
+  // 「昨日」の日付を確実に取得するロジック
   const yesterday = useMemo(() => {
     const d = new Date();
-    d.setDate(d.getDate() - 1); // 1日戻す
-    return d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+    // 日本標準時(JST)で計算するために、時差を考慮して1日前を設定
+    d.setDate(d.getDate() - 1);
+    
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    
+    return `${yyyy}-${mm}-${dd}`; // 2026-05-09 を確実に返す
   }, []);
 
-  // 昨日の日付でデータを取得
+  // 昨日の日付を固定で渡す
   const { data, stats } = useSensorData(yesterday, yesterday);
 
   return (
@@ -66,7 +72,7 @@ const CornProduct = () => {
 
         <div style={{ backgroundColor: '#fff', padding: '50px 40px', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.08)', position: 'relative', border: '1px solid #eee' }}>
           
-          {/* 寒暖差バッジ */}
+          {/* 昨日の寒暖差バッジ */}
           <div style={{ 
             position: 'absolute', top: '-20px', right: '40px', textAlign: 'right', zIndex: 10,
             backgroundColor: '#ea580c', color: 'white', padding: '15px 25px', borderRadius: '12px', 
