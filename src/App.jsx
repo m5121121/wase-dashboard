@@ -3,13 +3,14 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 
+// GASのデプロイURL
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxD_q2GNDIJ8KlFV5fKqoloyQbWSCb5-CgOJZwjAgXUhInRO22HCfy05u2Wm7evRKXq/exec';
 
 const App = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   
-  // 日本時間で今日の日付(yyyy-mm-dd)を正確に取得
+  // 日本時間で今日の日付(yyyy-mm-dd)を正確に取得する関数
   const getTodayJST = () => {
     return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
   };
@@ -37,7 +38,7 @@ const App = () => {
         }));
         setData(formattedData);
       } else {
-        setData([]); // データがない場合は空にする
+        setData([]); 
       }
     } catch (error) {
       console.error("Fetch Error:", error);
@@ -103,11 +104,31 @@ const App = () => {
             <LineChart data={data} margin={{ top: 15, right: 10, left: -25, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
               <XAxis dataKey="time" fontSize={10} tickFormatter={formatTimeOnly} minTickGap={30} axisLine={false} tickLine={false} />
-              <YAxis yAxisId="left" fontSize={10} axisLine={false} tickLine={false} />
-              <YAxis yAxisId="right" orientation="right" fontSize={10} axisLine={false} tickLine={false} domain={['auto', 'auto']} />
+              
+              {/* 気温・湿度軸: データの最小・最大に合わせて自動ズーム */}
+              <YAxis 
+                yAxisId="left" 
+                fontSize={10} 
+                axisLine={false} 
+                tickLine={false} 
+                domain={['dataMin - 1', 'dataMax + 1']} 
+                allowDecimals={true}
+              />
+              
+              {/* 気圧軸: 自動調整 */}
+              <YAxis 
+                yAxisId="right" 
+                orientation="right" 
+                fontSize={10} 
+                axisLine={false} 
+                tickLine={false} 
+                domain={['auto', 'auto']} 
+              />
+              
               <Tooltip isAnimationActive={false} contentStyle={{ fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
               <Legend verticalAlign="top" height={36} align="right" iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
-              <Line yAxisId="left" type="monotone" dataKey="temp" stroke="#f97316" name="気温" strokeWidth={2} dot={false} isAnimationActive={false} />
+              
+              <Line yAxisId="left" type="monotone" dataKey="temp" stroke="#f97316" name="気温" strokeWidth={3} dot={false} isAnimationActive={false} />
               <Line yAxisId="left" type="monotone" dataKey="humi" stroke="#8b5cf6" name="湿度" strokeWidth={2} dot={false} isAnimationActive={false} />
               <Line yAxisId="right" type="monotone" dataKey="pres" stroke="#0ea5e9" name="気圧" strokeWidth={2} dot={false} isAnimationActive={false} />
             </LineChart>
@@ -117,12 +138,12 @@ const App = () => {
         )}
       </div>
 
-      <ConsoleLog loading={loading} />
+      <ConsoleLog />
     </div>
   );
 };
 
-const ConsoleLog = ({ loading }) => {
+const ConsoleLog = () => {
   const [logs, setLogs] = useState(["> System initialized.", "> Sensors active."]);
   
   useEffect(() => {
@@ -141,7 +162,11 @@ const ConsoleLog = ({ loading }) => {
       boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center'
     }}>
       {logs.map((log, i) => (
-        <div key={i} style={{ opacity: (i + 1) / logs.length, lineHeight: '1.0', marginBottom: '1px' }}>
+        <div key={i} style={{ 
+          opacity: (i + 1) / logs.length, 
+          lineHeight: '1.0', // 行間を極限まで圧縮
+          marginBottom: '1px' 
+        }}>
           {log}
         </div>
       ))}
@@ -157,7 +182,11 @@ const ConsoleLog = ({ loading }) => {
 };
 
 const MiniCard = ({ label, value, unit, color }) => (
-  <div style={{ flex: 1, minWidth: 0, backgroundColor: 'white', padding: '8px', borderRadius: '8px', borderLeft: `4px solid ${color}`, boxShadow: '0 1px 2px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
+  <div style={{ 
+    flex: 1, minWidth: 0, backgroundColor: 'white', padding: '8px', 
+    borderRadius: '8px', borderLeft: `4px solid ${color}`, 
+    boxShadow: '0 1px 2px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' 
+  }}>
     <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden' }}>{label}</span>
     <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#1e293b' }}>
       {value != null ? value.toFixed(1) : '--'}<small style={{fontSize: '0.55rem', marginLeft: '1px'}}>{unit}</small>
