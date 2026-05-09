@@ -8,22 +8,31 @@ const CornProduct = () => {
   const baseUrl = import.meta.env.BASE_URL || "/";
   const heroImagePath = `${baseUrl}corn-hero.jpg`;
 
-  // 1. 「昨日」の日付(YYYY-MM-DD)を確実に計算
+  /**
+   * 1. 「昨日」の日付を計算
+   * スプレッドシート(image_6930d5.png)のフォーマット "YYYY/MM/DD HH:mm:ss" に合わせ、
+   * 前方一致でヒットするようにスラッシュ区切り ("YYYY/MM/DD") で生成します。
+   */
   const yesterdayString = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 1);
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
+    // ハイフン(-)からスラッシュ(/)へ変更
+    return `${yyyy}/${mm}/${dd}`;
   }, []);
 
-  // 2. カスタムフックに初期値として「昨日」を注入
-  // これにより、初回リクエストのパラメータが start=2026-05-09 となる
+  /**
+   * 2. カスタムフックに「昨日」を注入
+   * これにより、GASへのリクエストURLが exec?start=2026/05/09... となり、
+   * シート内の文字列と一致するようになります。
+   */
   const { data, stats, loading } = useSensorData(yesterdayString, yesterdayString);
 
+  // ローディング表示（データが空かつ読込中の場合）
   if (loading && data.length === 0) {
-    return <div style={{ textAlign: 'center', padding: '100px', fontSize: '1.2rem' }}>データを読み込み中...</div>;
+    return <div style={{ textAlign: 'center', padding: '100px', fontSize: '1.2rem', color: '#666' }}>昨日の栽培データを読み込み中...</div>;
   }
 
   return (
@@ -64,6 +73,7 @@ const CornProduct = () => {
         </div>
       </div>
 
+      {/* データセクション */}
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '60px 20px' }}>
         <div style={{ textAlign: 'center', marginBottom: '50px' }}>
           <h2 style={{ fontSize: '2.2rem', borderBottom: '3px solid #fbbf24', display: 'inline-block', paddingBottom: '10px', fontWeight: 'bold' }}>
@@ -72,16 +82,25 @@ const CornProduct = () => {
           <p style={{ color: '#444', marginTop: '15px', fontSize: '1.1rem', fontWeight: 'bold' }}>計測日：{yesterdayString}</p>
         </div>
 
-        <div style={{ backgroundColor: '#fff', padding: '50px 40px', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.08)', position: 'relative', border: '1px solid #eee' }}>
+        <div style={{ 
+          backgroundColor: '#fff', 
+          padding: '50px 40px', 
+          borderRadius: '20px', 
+          boxShadow: '0 10px 30px rgba(0,0,0,0.08)', 
+          position: 'relative', 
+          border: '1px solid #eee' 
+        }}>
           
-          {/* 昨日の寒暖差バッジ */}
+          {/* 寒暖差バッジ（NaN対策：データがある時のみ表示） */}
           <div style={{ 
             position: 'absolute', top: '-20px', right: '40px', textAlign: 'right', zIndex: 10,
             backgroundColor: '#ea580c', color: 'white', padding: '15px 25px', borderRadius: '12px', 
             boxShadow: '0 4px 15px rgba(234, 88, 12, 0.4)'
           }}>
             <div style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '5px' }}>昨日の寒暖差</div>
-            <div style={{ fontSize: '2.8rem', fontWeight: '900', lineHeight: '1' }}>{stats.diff}<small style={{fontSize: '1.2rem', marginLeft: '4px'}}>℃</small></div>
+            <div style={{ fontSize: '2.8rem', fontWeight: '900', lineHeight: '1' }}>
+              {data.length > 0 ? stats.diff : '--'}<small style={{fontSize: '1.2rem', marginLeft: '4px'}}>℃</small>
+            </div>
           </div>
 
           <h3 style={{ fontSize: '1.4rem', marginBottom: '40px', color: '#1e293b', fontWeight: 'bold', borderLeft: '6px solid #f43f5e', paddingLeft: '15px' }}>
@@ -89,53 +108,65 @@ const CornProduct = () => {
           </h3>
           
           <div style={{ width: '100%', height: '450px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data} margin={{ top: 40, right: 100, left: 20, bottom: 20 }}>
-                <defs>
-                  <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ddd" />
-                <XAxis dataKey="time" axisLine={true} tickLine={false} tick={{fontSize: 14, fill: '#444', fontWeight: 'bold'}} dy={10} />
-                <YAxis domain={['dataMin - 2', 'dataMax + 2']} hide />
-                
-                <ReferenceLine y={stats.max} stroke="#f43f5e" strokeWidth={2} strokeDasharray="5 5" 
-                  label={{ position: 'right', value: `最高 ${stats.max}℃`, fill: '#f43f5e', fontSize: 18, fontWeight: '900', dx: 10 }} 
-                />
-                <ReferenceLine y={stats.min} stroke="#0ea5e9" strokeWidth={2} strokeDasharray="5 5" 
-                  label={{ position: 'right', value: `最低 ${stats.min}℃`, fill: '#0ea5e9', fontSize: 18, fontWeight: '900', dx: 10 }} 
-                />
-
-                <Area 
-                  type="monotone" 
-                  dataKey="temp" 
-                  stroke="#f43f5e" 
-                  strokeWidth={5} 
-                  fill="url(#tempGradient)"
-                  animationDuration={1500}
-                >
-                  <LabelList 
-                    dataKey="temp" 
-                    content={(props) => {
-                      const { x, y, value } = props;
-                      if (value === stats.max || value === stats.min) {
-                        return (
-                          <g>
-                            <circle cx={x} cy={y} r={8} fill="#f43f5e" stroke="#fff" strokeWidth={3} />
-                            <text x={x} y={y} dy={-20} fill="#1e293b" fontSize={20} fontWeight="900" textAnchor="middle">
-                              {value}℃
-                            </text>
-                          </g>
-                        );
-                      }
-                      return null;
-                    }} 
+            {data.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data} margin={{ top: 40, right: 100, left: 20, bottom: 20 }}>
+                  <defs>
+                    <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ddd" />
+                  <XAxis 
+                    dataKey="time" 
+                    axisLine={true} 
+                    tickLine={false} 
+                    tick={{fontSize: 14, fill: '#444', fontWeight: 'bold'}} 
+                    dy={10} 
                   />
-                </Area>
-              </AreaChart>
-            </ResponsiveContainer>
+                  <YAxis domain={['dataMin - 2', 'dataMax + 2']} hide />
+                  
+                  <ReferenceLine y={stats.max} stroke="#f43f5e" strokeWidth={2} strokeDasharray="5 5" 
+                    label={{ position: 'right', value: `最高 ${stats.max}℃`, fill: '#f43f5e', fontSize: 18, fontWeight: '900', dx: 10 }} 
+                  />
+                  <ReferenceLine y={stats.min} stroke="#0ea5e9" strokeWidth={2} strokeDasharray="5 5" 
+                    label={{ position: 'right', value: `最低 ${stats.min}℃`, fill: '#0ea5e9', fontSize: 18, fontWeight: '900', dx: 10 }} 
+                  />
+
+                  <Area 
+                    type="monotone" 
+                    dataKey="temp" 
+                    stroke="#f43f5e" 
+                    strokeWidth={5} 
+                    fill="url(#tempGradient)"
+                    animationDuration={1500}
+                  >
+                    <LabelList 
+                      dataKey="temp" 
+                      content={(props) => {
+                        const { x, y, value } = props;
+                        if (value === stats.max || value === stats.min) {
+                          return (
+                            <g>
+                              <circle cx={x} cy={y} r={8} fill="#f43f5e" stroke="#fff" strokeWidth={3} />
+                              <text x={x} y={y} dy={-20} fill="#1e293b" fontSize={20} fontWeight="900" textAnchor="middle">
+                                {value}℃
+                              </text>
+                            </g>
+                          );
+                        }
+                        return null;
+                      }} 
+                    />
+                  </Area>
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', backgroundColor: '#f8fafc', borderRadius: '10px' }}>
+                指定された日付（{yesterdayString}）のデータが見つかりませんでした。
+              </div>
+            )}
           </div>
         </div>
       </div>
