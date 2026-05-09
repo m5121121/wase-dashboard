@@ -5,6 +5,10 @@ import {
 } from 'recharts';
 
 const CornProduct = () => {
+  // 公開URLのベースパスを取得（GitHub Pages対策）
+  const baseUrl = import.meta.env.BASE_URL || "/";
+  const heroImagePath = `${baseUrl}corn-hero.jpg`;
+
   const yesterday = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 1);
@@ -19,93 +23,98 @@ const CornProduct = () => {
       {/* ヒーローセクション */}
       <div style={{ 
         position: 'relative', height: '500px', 
-        // 修正：publicフォルダに画像を配置し、ベースパスを考慮したパス指定
-        backgroundImage: 'url("./corn-hero.jpg")', 
+        backgroundImage: `url("${heroImagePath}")`, 
         backgroundSize: 'cover', backgroundPosition: 'center',
-        display: 'flex', alignItems: 'center', justifyContent: 'center'
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        backgroundColor: '#444' // 画像読み込み待ちのバックアップカラー
       }}>
-        <div style={{ textAlign: 'center', padding: '0 20px' }}>
+        <div style={{ textAlign: 'center', padding: '0 20px', z_index: 1 }}>
           <h1 style={{
             color: '#ffffff',
-            fontSize: '3.5rem',
-            fontWeight: 'bold',
+            fontSize: '3.8rem', // 少し大きく
+            fontWeight: '900',
             letterSpacing: '0.1em',
             margin: 0,
-            textShadow: '3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 3px 0 #000, 0 -3px 0 #000, 2px 0 0 #000, -3px 0 0 #000'
+            textShadow: '4px 4px 0 #000, -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 0 4px 0 #000, 0 -4px 0 #000, 4px 0 0 #000, -4px 0 0 #000'
           }}>
             裏磐梯ゴールドラッシュ
           </h1>
-          {/* 修正：margin-topを広げて間合いを調整 */}
           <p style={{ 
-            color: '#fff', fontSize: '1.4rem', marginTop: '40px', fontWeight: 'bold',
-            textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
-            letterSpacing: '0.05em'
+            color: '#fff', fontSize: '1.6rem', marginTop: '45px', fontWeight: '800',
+            textShadow: '2px 2px 8px rgba(0,0,0,1)',
+            letterSpacing: '0.1em'
           }}>
             標高800mの寒暖差が育んだ、極上の甘み
           </p>
         </div>
       </div>
 
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '60px 20px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <h2 style={{ fontSize: '1.8rem', borderBottom: '2px solid #fbbf24', display: 'inline-block', paddingBottom: '10px' }}>
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '60px 20px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '50px' }}>
+          <h2 style={{ fontSize: '2.2rem', borderBottom: '3px solid #fbbf24', display: 'inline-block', paddingBottom: '15px', fontWeight: 'bold' }}>
             美味しさの根拠：昨日の栽培データ
           </h2>
-          <p style={{ color: '#666', marginTop: '10px' }}>計測日：{yesterday}</p>
+          <p style={{ color: '#444', marginTop: '15px', fontSize: '1.1rem', fontWeight: 'bold' }}>計測日：{yesterday}</p>
         </div>
 
-        <div style={{ backgroundColor: '#fdfdfd', padding: '40px', borderRadius: '15px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', position: 'relative' }}>
-          {/* 修正：グラフ内に寒暖差を強調表示 */}
+        <div style={{ backgroundColor: '#fff', padding: '50px 40px', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.08)', position: 'relative', border: '1px solid #eee' }}>
+          
+          {/* 寒暖差の強調表示 */}
           <div style={{ 
-            position: 'absolute', top: '20px', right: '40px', textAlign: 'right', zIndex: 10,
-            backgroundColor: 'rgba(255,255,255,0.9)', padding: '10px 20px', borderRadius: '8px', border: '2px solid #ea580c'
+            position: 'absolute', top: '-20px', right: '40px', textAlign: 'right', zIndex: 10,
+            backgroundColor: '#ea580c', color: 'white', padding: '15px 25px', borderRadius: '12px', 
+            boxShadow: '0 4px 15px rgba(234, 88, 12, 0.4)'
           }}>
-            <div style={{ fontSize: '0.8rem', color: '#c2410c', fontWeight: 'bold' }}>昨日の寒暖差</div>
-            <div style={{ fontSize: '2rem', color: '#ea580c', fontWeight: 'bold' }}>{stats.diff}<small style={{fontSize: '1rem'}}>℃</small></div>
+            <div style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '5px' }}>昨日の寒暖差</div>
+            <div style={{ fontSize: '2.8rem', fontWeight: '900', lineHeight: '1' }}>{stats.diff}<small style={{fontSize: '1.2rem', marginLeft: '4px'}}>℃</small></div>
           </div>
 
-          <h3 style={{ fontSize: '1.1rem', marginBottom: '30px', color: '#444' }}>気温の変化状況</h3>
+          <h3 style={{ fontSize: '1.4rem', marginBottom: '40px', color: '#1e293b', fontWeight: 'bold', borderLeft: '6px solid #f43f5e', paddingLeft: '15px' }}>
+            24時間の気温変化
+          </h3>
           
-          <div style={{ width: '100%', height: '400px' }}>
+          <div style={{ width: '100%', height: '450px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data} margin={{ top: 40, right: 80, left: 20, bottom: 0 }}>
+              <AreaChart data={data} margin={{ top: 40, right: 100, left: 20, bottom: 20 }}>
                 <defs>
                   <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
+                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.4}/>
                     <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ddd" />
+                <XAxis dataKey="time" axisLine={true} tickLine={false} tick={{fontSize: 14, fill: '#444', fontWeight: 'bold'}} dy={10} />
                 <YAxis domain={['dataMin - 2', 'dataMax + 2']} hide />
-                <Tooltip />
                 
-                {/* 修正：最高・最低気温のラインとラベル */}
-                <ReferenceLine y={stats.max} stroke="#f43f5e" strokeDasharray="3 3" label={{ position: 'right', value: `最高 ${stats.max}℃`, fill: '#f43f5e', fontSize: 14, fontWeight: 'bold' }} />
-                <ReferenceLine y={stats.min} stroke="#0ea5e9" strokeDasharray="3 3" label={{ position: 'right', value: `最低 ${stats.min}℃`, fill: '#0ea5e9', fontSize: 14, fontWeight: 'bold' }} />
+                {/* 最高・最低の基準線をより太く、文字を大きく */}
+                <ReferenceLine y={stats.max} stroke="#f43f5e" strokeWidth={2} strokeDasharray="5 5" 
+                  label={{ position: 'right', value: `最高 ${stats.max}℃`, fill: '#f43f5e', fontSize: 18, fontWeight: '900', dx: 10 }} 
+                />
+                <ReferenceLine y={stats.min} stroke="#0ea5e9" strokeWidth={2} strokeDasharray="5 5" 
+                  label={{ position: 'right', value: `最低 ${stats.min}℃`, fill: '#0ea5e9', fontSize: 18, fontWeight: '900', dx: 10 }} 
+                />
 
                 <Area 
                   type="monotone" 
                   dataKey="temp" 
                   stroke="#f43f5e" 
-                  strokeWidth={4} 
+                  strokeWidth={5} 
                   fill="url(#tempGradient)"
-                  dot={(props) => {
-                    const { payload, cx, cy } = props;
-                    // 修正：最高と最低のポイントだけラベル（ドット）を表示
-                    if (payload.temp === stats.max || payload.temp === stats.min) {
-                      return <circle cx={cx} cy={cy} r={6} fill="#f43f5e" stroke="#fff" strokeWidth={2} />;
-                    }
-                    return null;
-                  }}
+                  animationDuration={1500}
                 >
                   <LabelList 
                     dataKey="temp" 
                     content={(props) => {
                       const { x, y, value } = props;
-                      // 修正：値が最高または最低の場合のみテキストラベルを表示
                       if (value === stats.max || value === stats.min) {
-                        return <text x={x} y={y} dy={-15} fill="#f43f5e" fontSize={14} fontWeight="bold" textAnchor="middle">{value}℃</text>;
+                        return (
+                          <g>
+                            <circle cx={x} cy={y} r={8} fill="#f43f5e" stroke="#fff" strokeWidth={3} />
+                            <text x={x} y={y} dy={-20} fill="#1e293b" fontSize={20} fontWeight="900" textAnchor="middle">
+                              {value}℃
+                            </text>
+                          </g>
+                        );
                       }
                       return null;
                     }} 
