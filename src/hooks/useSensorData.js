@@ -2,65 +2,73 @@ import { useState, useEffect, useCallback } from 'react';
 
 const GAS_URL = import.meta.env.VITE_GAS_URL;
 
-export const useSensorData = () => {
+export const useSensorData = (initialStart, initialEnd) => {
+  // デフォルト値を生成する関数（JSTベース）
+  const getTodayJST = () => {
+    const d = new Date();
+    return d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+  };
+
+  // 引数があればそれを使用し、なければ当日をデフォルトにする
+  const [startDate, setStartDate] = useState(initialStart || getTodayJST());
+  const [endDate, setEndDate] = useState(initialEnd || getTodayJST());
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [logs, setLogs] = useState([]); // システムログの復活
-  const [stats, setStats] = useState({ diff: 0, max: 0, min: 0 }); // 寒暖差の復活
+  const [error, setError] = useState(null);
 
-  const getTodayJST = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
-  const [startDate, setStartDate] = useState(getTodayJST());
-  const [endDate, setEndDate] = useState(getTodayJST());
+  const [stats, setStats] = useState({ max: 0, min: 0, diff: 0 });
 
   const fetchData = useCallback(async () => {
-    if (!GAS_URL) return;
+    if (!GAS_URL) {
+      console.warn("GAS_URL is not defined");
+      return;
+    }
 
     setLoading(true);
     try {
-      const params = new URLSearchParams({ start: startDate, end: endDate });
-      const response = await fetch(`${GAS_URL}?${params.toString()}`);
+      // URLオブジェクトを使用してクエリパラメータを確実に構築
+      const url = new URL(GAS_URL);
+      url.searchParams.set('start', startDate);
+      url.searchParams.set('end', endDate);
+
+      const response = await fetch(url.toString());
       if (!response.ok) throw new Error('Network response was not ok');
       
       const rawData = await response.json();
-      
-      if (Array.isArray(rawData) && rawData.length > 0) {
-        // 1. グラフ用データの整形
-        const formattedData = rawData.map(item => ({
-          time: String(item["日時"] || ""),
-          weather: item["天気"] || "Clear",
-          temp: item["気温"] != null ? parseFloat(item["気温"]) : null,
-          humi: item["湿度"] != null ? parseFloat(item["湿度"]) : null,
-          pres: item["気圧"] != null ? parseFloat(item["気圧"]) : null
-        }));
 
-        // 2. 昨日の寒暖差などの統計計算（復活）
-        const temps = formattedData.map(d => d.temp).filter(t => t !== null);
-        if (temps.length > 0) {
-          const max = Math.max(...temps);
-          const min = Math.min(...temps);
-          setStats({ max, min, diff: (max - min).toFixed(1) });
-        }
-
-        // 3. システムログの生成（復活）
-        const newLogs = rawData.slice(0, 5).map(item => 
-          `[${item["日時"]}] データ受信: 気温${item["気温"]}℃ / 湿度${item["湿度"]}%`
-        );
-        setLogs(newLogs);
+      if (rawData.length > 0) {
+        // 気温のみを抽出して統計計算
+        const temps = rawData.map(d => d.temp);
+        const max = Math.max(...temps);
+        const min = Math.min(...temps);
         
-        setData(formattedData);
+        setStats({
+          max: parseFloat(max.toFixed(2)),
+          min: parseFloat(min.toFixed(2)),
+          diff: parseFloat((max - min).toFixed(1))
+        });
+        
+        // グラフ表示用に加工（秒をカットするなど）
+        const formatted = rawData.map(d => ({
+          ...d,
+          time: d.time.split(' ')[1]?.substring(0, 5) || d.time
+        }));
+        setData(formatted);
+      } else {
+        setData([]);
+        setStats({ max: 0, min: 0, diff: 0 });
       }
-    } catch (error) {
-      console.error("Fetch Error:", error);
-      setLogs(prev => [`[Error] ${new Date().toLocaleTimeString()}: 通信失敗`, ...prev]);
+    } catch (err) {
+      setError(err.message);
+      console.error("Fetch error:", err);
     } finally {
       setLoading(false);
     }
   }, [startDate, endDate]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-  return { 
-    data, loading, startDate, setStartDate, endDate, setEndDate, 
-    fetchData, logs, stats // 復活した変数を返却
-  };
+  return { data, loading, error, stats, setStartDate, setEndDate, fetchData };
 };

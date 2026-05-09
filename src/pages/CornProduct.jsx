@@ -8,21 +8,23 @@ const CornProduct = () => {
   const baseUrl = import.meta.env.BASE_URL || "/";
   const heroImagePath = `${baseUrl}corn-hero.jpg`;
 
-  // 「昨日」の日付を確実に取得するロジック
-  const yesterday = useMemo(() => {
+  // 1. 「昨日」の日付(YYYY-MM-DD)を確実に計算
+  const yesterdayString = useMemo(() => {
     const d = new Date();
-    // 日本標準時(JST)で計算するために、時差を考慮して1日前を設定
     d.setDate(d.getDate() - 1);
-    
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
-    
-    return `${yyyy}-${mm}-${dd}`; // 2026-05-09 を確実に返す
+    return `${yyyy}-${mm}-${dd}`;
   }, []);
 
-  // 昨日の日付を固定で渡す
-  const { data, stats } = useSensorData(yesterday, yesterday);
+  // 2. カスタムフックに初期値として「昨日」を注入
+  // これにより、初回リクエストのパラメータが start=2026-05-09 となる
+  const { data, stats, loading } = useSensorData(yesterdayString, yesterdayString);
+
+  if (loading && data.length === 0) {
+    return <div style={{ textAlign: 'center', padding: '100px', fontSize: '1.2rem' }}>データを読み込み中...</div>;
+  }
 
   return (
     <div style={{ fontFamily: '"Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif', color: '#333', backgroundColor: '#fff' }}>
@@ -67,7 +69,7 @@ const CornProduct = () => {
           <h2 style={{ fontSize: '2.2rem', borderBottom: '3px solid #fbbf24', display: 'inline-block', paddingBottom: '10px', fontWeight: 'bold' }}>
             美味しさの根拠：昨日の栽培データ
           </h2>
-          <p style={{ color: '#444', marginTop: '15px', fontSize: '1.1rem', fontWeight: 'bold' }}>計測日：{yesterday}</p>
+          <p style={{ color: '#444', marginTop: '15px', fontSize: '1.1rem', fontWeight: 'bold' }}>計測日：{yesterdayString}</p>
         </div>
 
         <div style={{ backgroundColor: '#fff', padding: '50px 40px', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.08)', position: 'relative', border: '1px solid #eee' }}>
