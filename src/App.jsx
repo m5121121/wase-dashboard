@@ -64,7 +64,7 @@ const App = () => {
   const latest = data.length > 0 ? data[data.length - 1] : null;
 
   const styles = {
-    container: { width: '100%', minHeight: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column' },
+    container: { width: '100%', minHeight: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', overflowX: 'hidden' },
     header: { 
       position: 'relative', height: '140px', display: 'flex', flexDirection: 'column', 
       justifyContent: 'flex-end', padding: '0 24px 20px 24px', overflow: 'hidden', color: '#fff'
@@ -131,10 +131,8 @@ const App = () => {
         ) : <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>データなし</div>}
       </div>
 
-      {/* 寒暖差ページ（スクロール用セクション） */}
       <YesterdayInsight data={data} />
 
-      {/* 旧システムログ */}
       <ConsoleLog />
     </div>
   );
@@ -151,7 +149,7 @@ const YesterdayInsight = ({ data }) => {
   const yesterdayRows = data.filter(d => d.time.startsWith(yesterdayStr));
 
   if (yesterdayRows.length === 0) return (
-    <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '0.8rem', backgroundColor: '#fff' }}>
+    <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '0.8rem', backgroundColor: '#fff', borderTop: '8px solid #f1f5f9' }}>
       昨日のデータが不足しているため解析できません
     </div>
   );
@@ -198,9 +196,23 @@ const ConsoleLog = () => {
     }, 8000);
     return () => clearInterval(itv);
   }, []);
+
+  const consoleStyle = {
+    width: '100%',
+    padding: '12px 24px',
+    backgroundColor: '#f1f5f9',
+    borderTop: '1px solid #e2e8f0',
+    fontFamily: 'monospace',
+    fontSize: '0.65rem',
+    color: '#64748b',
+    minHeight: '45px',
+    textAlign: 'left', // 左寄せ
+    boxSizing: 'border-box' // 突き出し防止
+  };
+
   return (
-    <div style={{ width: '100%', padding: '8px 24px', backgroundColor: '#f1f5f9', borderTop: '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '0.65rem', color: '#64748b', minHeight: '40px' }}>
-      {logs.map((l, i) => <div key={i} style={{ opacity: (i+1)/logs.length, lineHeight: '1.1' }}>{l}</div>)}
+    <div style={consoleStyle}>
+      {logs.map((l, i) => <div key={i} style={{ opacity: (i+1)/logs.length, lineHeight: '1.2' }}>{l}</div>)}
     </div>
   );
 };
