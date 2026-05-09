@@ -44,9 +44,10 @@ const App = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Cloudsを含め画像を更新
   const weatherThemes = {
     Clear: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1000&auto=format&fit=crop',
-    Clouds: 'https://images.unsplash.com/photo-1483977399921-6cf3832f7c4e?q=80&w=1000&auto=format&fit=crop',
+    Clouds: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1000&auto=format&fit=crop', // 更新版
     Rain: 'https://images.unsplash.com/photo-1534274988757-a28bf1f539cf?q=80&w=1000&auto=format&fit=crop',
     Drizzle: 'https://images.unsplash.com/photo-1558486012-817176f84c6d?q=80&w=1000&auto=format&fit=crop',
     Thunderstorm: 'https://images.unsplash.com/photo-1605727216801-e27ce1d0cc28?q=80&w=1000&auto=format&fit=crop',
@@ -66,8 +67,9 @@ const App = () => {
   const styles = {
     container: { width: '100%', minHeight: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', overflowX: 'hidden' },
     header: { 
-      position: 'relative', height: '140px', display: 'flex', flexDirection: 'column', 
-      justifyContent: 'flex-end', padding: '0 24px 20px 24px', overflow: 'hidden', color: '#fff'
+      position: 'relative', height: '70px', // 高さを2分の1に
+      display: 'flex', flexDirection: 'column', 
+      justifyContent: 'center', padding: '0 24px', overflow: 'hidden', color: '#fff'
     },
     headerBg: {
       position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
@@ -76,15 +78,15 @@ const App = () => {
     },
     overlay: {
       position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-      background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)',
+      background: 'linear-gradient(to right, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.2) 100%)', // 横方向のグラデーションに変更
       zIndex: 2
     },
-    headerContent: { position: 'relative', zIndex: 3, textShadow: '0 2px 4px rgba(0,0,0,0.3)' },
-    datePanel: { backgroundColor: '#fff', padding: '12px', display: 'flex', gap: '8px', justifyContent: 'center', borderBottom: '1px solid #e2e8f0' },
-    input: { padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.8rem', width: '110px' },
+    headerContent: { position: 'relative', zIndex: 3, textShadow: '0 1px 3px rgba(0,0,0,0.4)' },
+    datePanel: { backgroundColor: '#fff', padding: '10px', display: 'flex', gap: '8px', justifyContent: 'center', borderBottom: '1px solid #e2e8f0' },
+    input: { padding: '5px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.75rem', width: '110px' },
     cardContainer: { display: 'flex', gap: '10px', padding: '12px 16px', backgroundColor: '#f8fafc' },
     chartArea: { backgroundColor: '#fff', height: '340px', width: '100%', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' },
-    updateBtn: { padding: '6px 16px', borderRadius: '8px', border: 'none', backgroundColor: '#10b981', color: 'white', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold' }
+    updateBtn: { padding: '5px 14px', borderRadius: '8px', border: 'none', backgroundColor: '#10b981', color: 'white', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }
   };
 
   return (
@@ -93,10 +95,10 @@ const App = () => {
         <div style={styles.headerBg} />
         <div style={styles.overlay} />
         <div style={styles.headerContent}>
-          <h1 style={{ fontSize: '1.6rem', fontWeight: '900', margin: 0 }}>🍃 裏磐梯農園 Log</h1>
-          <div style={{ fontSize: '0.75rem', opacity: 0.9, marginTop: '4px' }}>
-             {latest ? `${latest.time.substring(0, 10)} ${latest.time.substring(11, 16)} 更新` : '--'}
-          </div>
+          <h1 style={{ fontSize: '1.2rem', fontWeight: '900', margin: 0, display: 'inline-block' }}>🍃 裏磐梯農園 Log</h1>
+          <span style={{ fontSize: '0.7rem', opacity: 0.9, marginLeft: '12px' }}>
+             {latest ? `${latest.time.substring(11, 16)} 更新` : '--'}
+          </span>
         </div>
       </header>
 
@@ -160,19 +162,12 @@ const YesterdayInsight = ({ data }) => {
   const diff = maxTemp - minTemp;
   const avgTemp = temps.reduce((a, b) => a + b, 0) / temps.length;
 
-  const styles = {
-    section: { padding: '30px 20px', backgroundColor: '#fff', borderTop: '8px solid #f1f5f9' },
-    title: { fontSize: '0.9rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '16px' },
-    mainCard: { backgroundColor: '#f8fafc', padding: '20px', borderRadius: '16px', textAlign: 'center', border: '1px solid #e2e8f0' },
-    diffValue: { fontSize: '2.5rem', fontWeight: '900', color: diff > 10 ? '#ef4444' : '#334155', margin: '4px 0' }
-  };
-
   return (
-    <div style={styles.section}>
-      <div style={styles.title}>📊 昨日の寒暖差レポート</div>
-      <div style={styles.mainCard}>
+    <div style={{ padding: '30px 20px', backgroundColor: '#fff', borderTop: '8px solid #f1f5f9' }}>
+      <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '16px' }}>📊 昨日の寒暖差レポート</div>
+      <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '16px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
         <div style={{ fontSize: '0.7rem', color: '#64748b' }}>TEMPERATURE DIFF</div>
-        <div style={styles.diffValue}>{diff.toFixed(1)}℃</div>
+        <div style={{ fontSize: '2.5rem', fontWeight: '900', color: diff > 10 ? '#ef4444' : '#334155', margin: '4px 0' }}>{diff.toFixed(1)}℃</div>
         <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{yesterdayStr} の最大振れ幅</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginTop: '15px', color: '#64748b', borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
           <span>最小: {minTemp.toFixed(1)}℃</span>
@@ -197,21 +192,8 @@ const ConsoleLog = () => {
     return () => clearInterval(itv);
   }, []);
 
-  const consoleStyle = {
-    width: '100%',
-    padding: '12px 24px',
-    backgroundColor: '#f1f5f9',
-    borderTop: '1px solid #e2e8f0',
-    fontFamily: 'monospace',
-    fontSize: '0.65rem',
-    color: '#64748b',
-    minHeight: '45px',
-    textAlign: 'left', // 左寄せ
-    boxSizing: 'border-box' // 突き出し防止
-  };
-
   return (
-    <div style={consoleStyle}>
+    <div style={{ width: '100%', padding: '12px 24px', backgroundColor: '#f1f5f9', borderTop: '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '0.65rem', color: '#64748b', minHeight: '45px', textAlign: 'left', boxSizing: 'border-box' }}>
       {logs.map((l, i) => <div key={i} style={{ opacity: (i+1)/logs.length, lineHeight: '1.2' }}>{l}</div>)}
     </div>
   );
