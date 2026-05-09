@@ -5,7 +5,6 @@ import {
 } from 'recharts';
 
 const Dashboard = () => {
-  // logs は取得しますが、表示からは除外します
   const { 
     data, startDate, setStartDate, endDate, setEndDate, 
     fetchData, stats 
@@ -46,7 +45,7 @@ const Dashboard = () => {
           <p style={valueStyle}>{stats.min} <span style={unitStyle}>℃</span></p>
         </div>
         <div style={{...cardStyle, borderLeft: '5px solid #ea580c', background: '#fff7ed'}}>
-          <p style={{...labelStyle, color: '#c2410c'}}>昨日の寒暖差（最大-最小）</p>
+          <p style={{...labelStyle, color: '#c2410c'}}>寒暖差（最大-最小）</p>
           <p style={{...valueStyle, color: '#ea580c'}}>{stats.diff} <span style={unitStyle}>℃</span></p>
         </div>
       </div>
