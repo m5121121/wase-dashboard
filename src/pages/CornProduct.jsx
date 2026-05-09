@@ -5,16 +5,17 @@ import {
 } from 'recharts';
 
 const CornProduct = () => {
-  // 公開URLのベースパスを取得（GitHub Pages対策）
   const baseUrl = import.meta.env.BASE_URL || "/";
   const heroImagePath = `${baseUrl}corn-hero.jpg`;
 
+  // 明示的に「昨日」の日付を計算
   const yesterday = useMemo(() => {
     const d = new Date();
-    d.setDate(d.getDate() - 1);
+    d.setDate(d.getDate() - 1); // 1日戻す
     return d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
   }, []);
 
+  // 昨日の日付でデータを取得
   const { data, stats } = useSensorData(yesterday, yesterday);
 
   return (
@@ -26,16 +27,22 @@ const CornProduct = () => {
         backgroundImage: `url("${heroImagePath}")`, 
         backgroundSize: 'cover', backgroundPosition: 'center',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        backgroundColor: '#444' // 画像読み込み待ちのバックアップカラー
+        backgroundColor: '#444'
       }}>
-        <div style={{ textAlign: 'center', padding: '0 20px', z_index: 1 }}>
+        <div style={{ textAlign: 'center', padding: '0 20px', zIndex: 1 }}>
           <h1 style={{
-            color: '#ffffff',
-            fontSize: '3.8rem', // 少し大きく
+            color: '#000', 
+            fontSize: '3.8rem',
             fontWeight: '900',
             letterSpacing: '0.1em',
             margin: 0,
-            textShadow: '4px 4px 0 #000, -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 0 4px 0 #000, 0 -4px 0 #000, 4px 0 0 #000, -4px 0 0 #000'
+            textShadow: `
+              3px 3px 0 #fff, -3px -3px 0 #fff, 
+              3px -3px 0 #fff, -3px 3px 0 #fff,
+              0 3px 0 #fff, 0 -3px 0 #fff, 
+              3px 0 0 #fff, -3px 0 0 #fff,
+              4px 4px 10px rgba(0,0,0,0.3)
+            `
           }}>
             裏磐梯ゴールドラッシュ
           </h1>
@@ -51,7 +58,7 @@ const CornProduct = () => {
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '60px 20px' }}>
         <div style={{ textAlign: 'center', marginBottom: '50px' }}>
-          <h2 style={{ fontSize: '2.2rem', borderBottom: '3px solid #fbbf24', display: 'inline-block', paddingBottom: '15px', fontWeight: 'bold' }}>
+          <h2 style={{ fontSize: '2.2rem', borderBottom: '3px solid #fbbf24', display: 'inline-block', paddingBottom: '10px', fontWeight: 'bold' }}>
             美味しさの根拠：昨日の栽培データ
           </h2>
           <p style={{ color: '#444', marginTop: '15px', fontSize: '1.1rem', fontWeight: 'bold' }}>計測日：{yesterday}</p>
@@ -59,7 +66,7 @@ const CornProduct = () => {
 
         <div style={{ backgroundColor: '#fff', padding: '50px 40px', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.08)', position: 'relative', border: '1px solid #eee' }}>
           
-          {/* 寒暖差の強調表示 */}
+          {/* 寒暖差バッジ */}
           <div style={{ 
             position: 'absolute', top: '-20px', right: '40px', textAlign: 'right', zIndex: 10,
             backgroundColor: '#ea580c', color: 'white', padding: '15px 25px', borderRadius: '12px', 
@@ -86,7 +93,6 @@ const CornProduct = () => {
                 <XAxis dataKey="time" axisLine={true} tickLine={false} tick={{fontSize: 14, fill: '#444', fontWeight: 'bold'}} dy={10} />
                 <YAxis domain={['dataMin - 2', 'dataMax + 2']} hide />
                 
-                {/* 最高・最低の基準線をより太く、文字を大きく */}
                 <ReferenceLine y={stats.max} stroke="#f43f5e" strokeWidth={2} strokeDasharray="5 5" 
                   label={{ position: 'right', value: `最高 ${stats.max}℃`, fill: '#f43f5e', fontSize: 18, fontWeight: '900', dx: 10 }} 
                 />
