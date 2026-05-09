@@ -44,10 +44,9 @@ const App = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Cloudsを含め画像を更新
   const weatherThemes = {
     Clear: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1000&auto=format&fit=crop',
-    Clouds: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1000&auto=format&fit=crop', // 更新版
+    Clouds: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1000&auto=format&fit=crop',
     Rain: 'https://images.unsplash.com/photo-1534274988757-a28bf1f539cf?q=80&w=1000&auto=format&fit=crop',
     Drizzle: 'https://images.unsplash.com/photo-1558486012-817176f84c6d?q=80&w=1000&auto=format&fit=crop',
     Thunderstorm: 'https://images.unsplash.com/photo-1605727216801-e27ce1d0cc28?q=80&w=1000&auto=format&fit=crop',
@@ -67,9 +66,9 @@ const App = () => {
   const styles = {
     container: { width: '100%', minHeight: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', overflowX: 'hidden' },
     header: { 
-      position: 'relative', height: '70px', // 高さを2分の1に
+      position: 'relative', height: '70px',
       display: 'flex', flexDirection: 'column', 
-      justifyContent: 'center', padding: '0 24px', overflow: 'hidden', color: '#fff'
+      justifyContent: 'center', padding: '0 24px', overflow: 'hidden', color: '#1e293b' // 基本色を暗めに設定
     },
     headerBg: {
       position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
@@ -78,10 +77,21 @@ const App = () => {
     },
     overlay: {
       position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-      background: 'linear-gradient(to right, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.2) 100%)', // 横方向のグラデーションに変更
+      background: 'linear-gradient(to right, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%)', // オーバーレイを少し明るめに
       zIndex: 2
     },
-    headerContent: { position: 'relative', zIndex: 3, textShadow: '0 1px 3px rgba(0,0,0,0.4)' },
+    headerContent: { 
+      position: 'relative', 
+      zIndex: 3,
+      // 白い縁取り（text-shadow）を追加
+      textShadow: `
+        1px 1px 0 #fff,
+       -1px 1px 0 #fff,
+        1px -1px 0 #fff,
+       -1px -1px 0 #fff,
+        0px 2px 4px rgba(0,0,0,0.2)
+      `
+    },
     datePanel: { backgroundColor: '#fff', padding: '10px', display: 'flex', gap: '8px', justifyContent: 'center', borderBottom: '1px solid #e2e8f0' },
     input: { padding: '5px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.75rem', width: '110px' },
     cardContainer: { display: 'flex', gap: '10px', padding: '12px 16px', backgroundColor: '#f8fafc' },
@@ -96,7 +106,7 @@ const App = () => {
         <div style={styles.overlay} />
         <div style={styles.headerContent}>
           <h1 style={{ fontSize: '1.2rem', fontWeight: '900', margin: 0, display: 'inline-block' }}>🍃 裏磐梯農園 Log</h1>
-          <span style={{ fontSize: '0.7rem', opacity: 0.9, marginLeft: '12px' }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 'bold', marginLeft: '12px' }}>
              {latest ? `${latest.time.substring(11, 16)} 更新` : '--'}
           </span>
         </div>
