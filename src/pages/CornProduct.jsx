@@ -25,13 +25,14 @@ const CornProduct = () => {
   }, [rawData]);
 
   /**
-   * 最高・最低気温を確実に描画するためのカスタムコンポーネント
-   * グラフの描画領域（SVG）の中に直接描くため、マージン0でも非表示になりません。
+   * カスタムラベル描画コンポーネント
+   * points プロパティから各データ点の SVG 座標を取得して描画します。
    */
-  const RenderCustomLabels = (props) => {
+  const CustomLabelLayer = (props) => {
     const { points, width } = props;
     if (!points || points.length === 0) return null;
 
+    // 数値として最高・最低を抽出
     const maxVal = Math.max(...points.map(p => p.value));
     const minVal = Math.min(...points.map(p => p.value));
 
@@ -39,39 +40,40 @@ const CornProduct = () => {
     const minP = points.find(p => p.value === minVal);
 
     return (
-      <g>
-        {/* 最高気温ラベル */}
+      <g style={{ pointerEvents: 'none' }}>
+        {/* 最高気温ラベル: 点の上に配置 */}
         {maxP && (
           <g>
             <circle cx={maxP.x} cy={maxP.y} r={5} fill="#f43f5e" stroke="#fff" strokeWidth={2} />
             <text 
               x={maxP.x} 
               y={maxP.y} 
-              // 右端(width-60px以内)なら文字を左に寄せる
-              dx={maxP.x > width - 60 ? -8 : 8} 
               dy={-15} 
+              // 右端 50px 以内なら右詰めに配置してはみ出しを防ぐ
+              dx={maxP.x > width - 50 ? -5 : 5}
               fill="#f43f5e" 
-              fontSize={16} 
+              fontSize={15} 
               fontWeight="900"
-              textAnchor={maxP.x > width - 60 ? "end" : "start"}
+              textAnchor={maxP.x > width - 50 ? "end" : "start"}
             >
               最高 {maxVal}℃
             </text>
           </g>
         )}
-        {/* 最低気温ラベル */}
+
+        {/* 最低気温ラベル: 点の下に配置 */}
         {minP && (
           <g>
             <circle cx={minP.x} cy={minP.y} r={5} fill="#0ea5e9" stroke="#fff" strokeWidth={2} />
             <text 
               x={minP.x} 
               y={minP.y} 
-              dx={minP.x > width - 60 ? -8 : 8} 
               dy={25} 
+              dx={minP.x > width - 50 ? -5 : 5}
               fill="#0ea5e9" 
-              fontSize={16} 
+              fontSize={15} 
               fontWeight="900"
-              textAnchor={minP.x > width - 60 ? "end" : "start"}
+              textAnchor={minP.x > width - 50 ? "end" : "start"}
             >
               最低 {minVal}℃
             </text>
@@ -82,7 +84,7 @@ const CornProduct = () => {
   };
 
   if (loading && rawData.length === 0) {
-    return <div style={{ textAlign: 'center', padding: '100px', color: '#666' }}>読み込み中...</div>;
+    return <div style={{ textAlign: 'center', padding: '100px', color: '#666' }}>データを読み込み中...</div>;
   }
 
   return (
@@ -114,10 +116,10 @@ const CornProduct = () => {
           <div style={{ width: '100%', height: '400px' }}>
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                {/* - margin right を 0 にして右端の余白を抹殺
-                  - left を -20 にして YAxis 非表示分の隙間を消す
+                {/* - right を 5 にして右端の余白を最小化
+                  - left を -25 にして YAxis 非表示分の隙間を消す
                 */}
-                <AreaChart data={chartData} margin={{ top: 30, right: 0, left: -20, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 30, right: 5, left: -25, bottom: 0 }}>
                   <defs>
                     <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
@@ -126,13 +128,13 @@ const CornProduct = () => {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   
-                  {/* padding right を 0 にして右端まで線を伸ばす */}
                   <XAxis 
                     dataKey="time" 
                     tick={{fontSize: 11, fill: '#64748b', fontWeight: 'bold'}} 
                     dy={10} 
                     padding={{ left: 0, right: 0 }}
                   />
+                  {/* ラベルを表示する高さを確保するため上下に 5℃ のバッファ */}
                   <YAxis domain={['dataMin - 5', 'dataMax + 5']} hide />
                   
                   <Tooltip
@@ -151,8 +153,8 @@ const CornProduct = () => {
                     fill="url(#tempGradient)"
                     isAnimationActive={false} 
                     activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff', fill: '#f43f5e' }}
-                    // カスタムラベル関数を直接渡す
-                    label={<RenderCustomLabels />}
+                    // ラベルの描画をここで実行
+                    label={<CustomLabelLayer />}
                   />
                 </AreaChart>
               </ResponsiveContainer>
