@@ -20,16 +20,13 @@ const CornProduct = () => {
   const { data: rawData, stats, loading } = useSensorData(yesterdayString, yesterdayString);
 
   /**
-   * グラフ用データの整形: 0:00〜23:59の全時間をカバーしつつ、
-   * ラベル判定用に max/min のフラグを付与
+   * グラフ用データの整形
    */
   const chartData = useMemo(() => {
     if (!rawData || rawData.length === 0) return [];
     
-    // 時間でソート
     const sortedData = [...rawData].sort((a, b) => a.time.localeCompare(b.time));
     
-    // グラフの端（00:00と23:59）にデータがない場合の補完用
     const firstData = sortedData[0];
     const lastData = sortedData[sortedData.length - 1];
     
@@ -39,33 +36,23 @@ const CornProduct = () => {
       isMin: d.temp === stats.min
     }));
 
-    // 00:00地点にデータがなければ先頭データで補完
     if (firstData.time > "00:00") {
-      displayData.unshift({ time: "00:00", temp: firstData.temp, isPlaceholder: true });
+      displayData.unshift({ time: "00:00", temp: firstData.temp, isMax: false, isMin: false });
     }
-    // 23:59地点にデータがなければ最終データで補完
     if (lastData.time < "23:59") {
-      displayData.push({ time: "23:59", temp: lastData.temp, isPlaceholder: true });
+      displayData.push({ time: "23:59", temp: lastData.temp, isMax: false, isMin: false });
     }
 
     return displayData;
   }, [rawData, stats]);
 
   if (loading && rawData.length === 0) {
-    return (
-      <div style={{ textAlign: 'center', padding: '100px 20px', fontSize: '1.2rem', color: '#666' }}>
-        昨日の栽培データを読み込み中...
-      </div>
-    );
+    return <div style={{ textAlign: 'center', padding: '100px 20px', color: '#666' }}>読み込み中...</div>;
   }
 
   return (
-    <div style={{ 
-      fontFamily: '"Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif', 
-      color: '#333', backgroundColor: '#f8fafc', minHeight: '100vh' 
-    }}>
+    <div style={{ fontFamily: 'sans-serif', color: '#333', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
       
-      {/* ヒーローセクション */}
       <div style={{ 
         position: 'relative', height: '280px', 
         backgroundImage: `url("${heroImagePath}")`, 
@@ -82,15 +69,12 @@ const CornProduct = () => {
         </h1>
       </div>
 
-      {/* データセクション */}
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '15px 10px' }}>
-        
         <div style={{ 
           backgroundColor: '#fff', padding: '20px 10px', borderRadius: '16px', 
           boxShadow: '0 4px 25px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0'
         }}>
           
-          {/* ヘッダー領域 */}
           <div style={{
             display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between',
             alignItems: 'center', gap: '10px', marginBottom: '10px', padding: '0 5px'
@@ -104,7 +88,7 @@ const CornProduct = () => {
             
             <div style={{ 
               backgroundColor: '#ea580c', color: 'white', padding: '8px 15px', borderRadius: '10px', 
-              display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 8px rgba(234, 88, 12, 0.2)'
+              display: 'flex', alignItems: 'center', gap: '8px'
             }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>昨日の寒暖差</span>
               <span style={{ fontSize: '1.6rem', fontWeight: '900' }}>
@@ -113,7 +97,6 @@ const CornProduct = () => {
             </div>
           </div>
           
-          {/* グラフ表示エリア */}
           <div style={{ width: '100%', height: '360px' }}>
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -154,7 +137,9 @@ const CornProduct = () => {
                       dataKey="temp" 
                       content={(props) => {
                         const { x, y, value, index, payload } = props;
-                        // payloadの中の判定フラグを使用
+                        
+                        // payload の存在チェックを厳重に行う
+                        if (!payload) return null;
                         const isMax = payload.isMax;
                         const isMin = payload.isMin;
 
@@ -183,7 +168,7 @@ const CornProduct = () => {
               </ResponsiveContainer>
             ) : (
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
-                栽培データを読み込めませんでした
+                データがありません
               </div>
             )}
           </div>
