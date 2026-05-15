@@ -25,31 +25,33 @@ const CornProduct = () => {
   const chartData = useMemo(() => {
     if (!rawData || rawData.length === 0) return [];
     
-    // 時間順にソート
+    // 1. まず観測データを時間順にソート
     const sortedData = [...rawData].sort((a, b) => a.time.localeCompare(b.time));
-    const displayData = [...sortedData];
+    
+    // 2. 観測データの中での最大・最小の最初の出現位置をマーク
+    const maxVal = Number(stats.max);
+    const minVal = Number(stats.min);
+    let foundMax = false;
+    let foundMin = false;
 
-    // 00:00と23:59を補完してグラフを横いっぱいに広げる
+    const markedData = sortedData.map(d => {
+      const isMax = !foundMax && Number(d.temp) === maxVal;
+      const isMin = !foundMin && Number(d.temp) === minVal;
+      if (isMax) foundMax = true;
+      if (isMin) foundMin = true;
+      return { ...d, isTargetMax: isMax, isTargetMin: isMin };
+    });
+
+    // 3. グラフを端まで広げるための補完（ラベル判定には影響させない）
+    const displayData = [...markedData];
     if (displayData[0].time > "00:00") {
-      displayData.unshift({ ...displayData[0], time: "00:00", isGenerated: true });
+      displayData.unshift({ ...displayData[0], time: "00:00", isTargetMax: false, isTargetMin: false });
     }
     if (displayData[displayData.length - 1].time < "23:59") {
-      displayData.push({ ...displayData[displayData.length - 1], time: "23:59", isGenerated: true });
+      displayData.push({ ...displayData[displayData.length - 1], time: "23:59", isTargetMax: false, isTargetMin: false });
     }
 
-    // ラベルを表示する地点を厳密に特定（生成された端点データは除外）
-    // 数値の微差による不一致を防ぐため、四捨五入して比較
-    const maxVal = Math.round(Number(stats.max) * 10) / 10;
-    const minVal = Math.round(Number(stats.min) * 10) / 10;
-
-    const maxIndex = displayData.findIndex(d => !d.isGenerated && Math.round(Number(d.temp) * 10) / 10 === maxVal);
-    const minIndex = displayData.findIndex(d => !d.isGenerated && Math.round(Number(d.temp) * 10) / 10 === minVal);
-
-    return displayData.map((d, i) => ({
-      ...d,
-      isTargetMax: i === maxIndex,
-      isTargetMin: i === minIndex
-    }));
+    return displayData;
   }, [rawData, stats]);
 
   if (loading && rawData.length === 0) {
@@ -59,7 +61,6 @@ const CornProduct = () => {
   return (
     <div style={{ fontFamily: 'sans-serif', color: '#333', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
       
-      {/* ヒーローセクション */}
       <div style={{ 
         position: 'relative', height: '280px', 
         backgroundImage: `url("${heroImagePath}")`, 
@@ -82,7 +83,6 @@ const CornProduct = () => {
           boxShadow: '0 4px 25px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0'
         }}>
           
-          {/* ヘッダー領域 */}
           <div style={{
             display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between',
             alignItems: 'center', gap: '10px', marginBottom: '10px', padding: '0 5px'
@@ -105,7 +105,6 @@ const CornProduct = () => {
             </div>
           </div>
           
-          {/* グラフ領域: 右余白を0に設定 */}
           <div style={{ width: '100%', height: '360px' }}>
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -123,7 +122,7 @@ const CornProduct = () => {
                     ticks={['00:00', '06:00', '12:00', '18:00', '23:59']}
                     tick={{fontSize: 10, fill: '#64748b'}} 
                     dy={10}
-                    padding={{ left: 5, right: 5 }}
+                    padding={{ left: 5, right: 10 }}
                   />
                   <YAxis domain={['dataMin - 6', 'dataMax + 6']} hide />
                   
@@ -142,24 +141,26 @@ const CornProduct = () => {
                     strokeWidth={3} 
                     fill="url(#tempGradient)"
                     animationDuration={1000}
+                    isAnimationActive={false} // デバッグのため一旦アニメーションオフ、表示確認後trueに戻せます
                   >
                     <LabelList 
                       dataKey="temp" 
                       content={(props) => {
                         const { x, y, value, index, payload } = props;
                         
-                        // 前段の整形ロジックで付与したターゲットフラグを使用
-                        if (!payload?.isTargetMax && !payload?.isTargetMin) return null;
-                        
-                        const isMax = payload.isTargetMax;
+                        // 明示的に付与したフラグで判定
+                        const isMax = payload?.isTargetMax;
+                        const isMin = payload?.isTargetMin;
 
-                        // 端っこでのラベル切れ防止（判定を少し緩める）
+                        if (!isMax && !isMin) return null;
+                        
+                        // 右端での切れ防止：最後から5要素以内なら右寄せ(end)にする
                         let textAnchor = "middle";
                         if (index > chartData.length - 5) textAnchor = "end";
                         if (index < 5) textAnchor = "start";
 
                         return (
-                          <g key={`label-${index}`}>
+                          <g key={`label-${index}-${value}`}>
                             <circle cx={x} cy={y} r={5} fill={isMax ? "#f43f5e" : "#0ea5e9"} stroke="#fff" strokeWidth={2} />
                             <text 
                               x={x} y={y} dy={isMax ? -18 : 32} 
