@@ -25,10 +25,11 @@ const CornProduct = () => {
   const chartData = useMemo(() => {
     if (!rawData || rawData.length === 0) return [];
     
+    // 時間順にソート
     const sortedData = [...rawData].sort((a, b) => a.time.localeCompare(b.time));
     const displayData = [...sortedData];
 
-    // 00:00と23:59の端点を補完
+    // 00:00と23:59の端点を補完してグラフを横いっぱいに広げる
     if (displayData[0].time > "00:00") {
       displayData.unshift({ ...displayData[0], time: "00:00" });
     }
@@ -36,7 +37,7 @@ const CornProduct = () => {
       displayData.push({ ...displayData[displayData.length - 1], time: "23:59" });
     }
 
-    // 重複ラベル防止用：最初に見つかった最高/最低気温のインデックスを特定
+    // 重複を避けるため、最初に出現する最高・最低気温のインデックスを保持
     const maxIndex = displayData.findIndex(d => Number(d.temp) === Number(stats.max));
     const minIndex = displayData.findIndex(d => Number(d.temp) === Number(stats.min));
 
@@ -54,6 +55,7 @@ const CornProduct = () => {
   return (
     <div style={{ fontFamily: 'sans-serif', color: '#333', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
       
+      {/* ヒーローセクション */}
       <div style={{ 
         position: 'relative', height: '280px', 
         backgroundImage: `url("${heroImagePath}")`, 
@@ -76,6 +78,7 @@ const CornProduct = () => {
           boxShadow: '0 4px 25px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0'
         }}>
           
+          {/* ヘッダー・寒暖差バッジ */}
           <div style={{
             display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between',
             alignItems: 'center', gap: '10px', marginBottom: '10px', padding: '0 5px'
@@ -98,10 +101,11 @@ const CornProduct = () => {
             </div>
           </div>
           
+          {/* グラフ領域: 右余白をなくすために margin.right を 5 に変更 */}
           <div style={{ width: '100%', height: '360px' }}>
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 40, right: 40, left: -20, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 40, right: 5, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
@@ -110,11 +114,13 @@ const CornProduct = () => {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   
+                  {/* X軸: padding を 0 にして左右を詰める */}
                   <XAxis 
                     dataKey="time" 
                     ticks={['00:00', '06:00', '12:00', '18:00', '23:59']}
                     tick={{fontSize: 10, fill: '#64748b'}} 
-                    dy={10} 
+                    dy={10}
+                    padding={{ left: 0, right: 0 }}
                   />
                   <YAxis domain={['dataMin - 6', 'dataMax + 6']} hide />
                   
@@ -139,15 +145,16 @@ const CornProduct = () => {
                       content={(props) => {
                         const { x, y, value, index, payload } = props;
                         
-                        // payloadに含まれる「最初か否か」のフラグで判定
+                        // フラグを使用して最初に出現した値のみ表示
                         const isMax = payload?.isFirstMax;
                         const isMin = payload?.isFirstMin;
 
                         if (!isMax && !isMin) return null;
                         
+                        // 右端付近でのラベル切れ防止（アンカーを右寄せに）
                         let textAnchor = "middle";
-                        if (index > chartData.length - 10) textAnchor = "end";
-                        if (index < 10) textAnchor = "start";
+                        if (index > chartData.length - 8) textAnchor = "end";
+                        if (index < 8) textAnchor = "start";
 
                         return (
                           <g key={`label-${index}-${value}`}>
