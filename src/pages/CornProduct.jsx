@@ -20,31 +20,24 @@ const CornProduct = () => {
   const { data: rawData, stats, loading } = useSensorData(yesterdayString, yesterdayString);
 
   /**
-   * グラフ用データの整形
+   * グラフ用データの整形: 00:00と23:59を補完して24時間の幅を確保
    */
   const chartData = useMemo(() => {
     if (!rawData || rawData.length === 0) return [];
     
     const sortedData = [...rawData].sort((a, b) => a.time.localeCompare(b.time));
-    
-    const firstData = sortedData[0];
-    const lastData = sortedData[sortedData.length - 1];
-    
-    const displayData = sortedData.map(d => ({
-      ...d,
-      isMax: d.temp === stats.max,
-      isMin: d.temp === stats.min
-    }));
+    const displayData = [...sortedData];
 
-    if (firstData.time > "00:00") {
-      displayData.unshift({ time: "00:00", temp: firstData.temp, isMax: false, isMin: false });
+    // 00:00と23:59の端点を補完（グラフを横いっぱいに広げるため）
+    if (displayData[0].time > "00:00") {
+      displayData.unshift({ ...displayData[0], time: "00:00" });
     }
-    if (lastData.time < "23:59") {
-      displayData.push({ time: "23:59", temp: lastData.temp, isMax: false, isMin: false });
+    if (displayData[displayData.length - 1].time < "23:59") {
+      displayData.push({ ...displayData[displayData.length - 1], time: "23:59" });
     }
 
     return displayData;
-  }, [rawData, stats]);
+  }, [rawData]);
 
   if (loading && rawData.length === 0) {
     return <div style={{ textAlign: 'center', padding: '100px 20px', color: '#666' }}>読み込み中...</div>;
@@ -53,6 +46,7 @@ const CornProduct = () => {
   return (
     <div style={{ fontFamily: 'sans-serif', color: '#333', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
       
+      {/* ヒーローセクション */}
       <div style={{ 
         position: 'relative', height: '280px', 
         backgroundImage: `url("${heroImagePath}")`, 
@@ -75,6 +69,7 @@ const CornProduct = () => {
           boxShadow: '0 4px 25px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0'
         }}>
           
+          {/* ヘッダー・寒暖差バッジ */}
           <div style={{
             display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between',
             alignItems: 'center', gap: '10px', marginBottom: '10px', padding: '0 5px'
@@ -97,10 +92,11 @@ const CornProduct = () => {
             </div>
           </div>
           
+          {/* グラフ領域 */}
           <div style={{ width: '100%', height: '360px' }}>
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 40, right: 30, left: -20, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 40, right: 35, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
@@ -136,24 +132,24 @@ const CornProduct = () => {
                     <LabelList 
                       dataKey="temp" 
                       content={(props) => {
-                        const { x, y, value, index, payload } = props;
+                        const { x, y, value, index } = props;
                         
-                        // payload の存在チェックを厳重に行う
-                        if (!payload) return null;
-                        const isMax = payload.isMax;
-                        const isMin = payload.isMin;
+                        // stats の値と厳密に一致するかで判定（数値型への変換含む）
+                        const isMax = Number(value) === Number(stats.max);
+                        const isMin = Number(value) === Number(stats.min);
 
                         if (!isMax && !isMin) return null;
                         
+                        // 端っこでのラベル切れ防止
                         let textAnchor = "middle";
                         if (index > chartData.length - 5) textAnchor = "end";
                         if (index < 5) textAnchor = "start";
 
                         return (
-                          <g key={`label-${index}`}>
+                          <g key={`label-${index}-${value}`}>
                             <circle cx={x} cy={y} r={5} fill={isMax ? "#f43f5e" : "#0ea5e9"} stroke="#fff" strokeWidth={2} />
                             <text 
-                              x={x} y={y} dy={isMax ? -18 : 30} 
+                              x={x} y={y} dy={isMax ? -18 : 32} 
                               fill={isMax ? "#f43f5e" : "#0ea5e9"} fontSize={17} fontWeight="900" 
                               textAnchor={textAnchor}
                             >
