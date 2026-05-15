@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useSensorData } from '../hooks/useSensorData';
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine, Tooltip 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine, Tooltip, ReferenceDot
 } from 'recharts';
 
 const CornProduct = () => {
@@ -25,61 +25,27 @@ const CornProduct = () => {
   }, [rawData]);
 
   /**
-   * 最高・最低気温を絶対に表示させるためのカスタムレイヤー
+   * 最高・最低気温用のカスタムラベル
+   * 右端（20時以降など）にある場合は、文字を左に寄せて見切れを防ぎます。
    */
-  const CustomLabelLayer = (props) => {
-    const { points, width } = props;
-    if (!points || points.length === 0) return null;
-
-    // 数値として最高・最低を抽出
-    const maxVal = Math.max(...points.map(p => p.value));
-    const minVal = Math.min(...points.map(p => p.value));
-
-    // それぞれの最初の1点を探す
-    const maxP = points.find(p => p.value === maxVal);
-    const minP = points.find(p => p.value === minVal);
-
+  const RenderSpecialLabel = (props) => {
+    const { x, y, value, isMax, cx } = props;
+    const isRightEdge = x > 800; // グラフの右側に位置するか判定（ResponsiveContainer内での相対値）
+    
     return (
-      <g style={{ pointerEvents: 'none' }}>
-        {/* 最高気温ラベル */}
-        {maxP && (
-          <g>
-            <circle cx={maxP.x} cy={maxP.y} r={5} fill="#f43f5e" stroke="#fff" strokeWidth={2} />
-            <text 
-              x={maxP.x} 
-              y={maxP.y} 
-              dy={-18} 
-              // 右端に寄りすぎている場合は左側に寄せる
-              dx={maxP.x > width - 60 ? -5 : 5}
-              fill="#f43f5e" 
-              fontSize={18} 
-              fontWeight="900"
-              textAnchor={maxP.x > width - 60 ? "end" : "start"}
-            >
-              最高 {maxVal}℃
-            </text>
-          </g>
-        )}
-
-        {/* 最低気温ラベル */}
-        {minP && (
-          <g>
-            <circle cx={minP.x} cy={minP.y} r={5} fill="#0ea5e9" stroke="#fff" strokeWidth={2} />
-            <text 
-              x={minP.x} 
-              y={minP.y} 
-              dy={30} 
-              dx={minP.x > width - 60 ? -5 : 5}
-              fill="#0ea5e9" 
-              fontSize={18} 
-              fontWeight="900"
-              textAnchor={minP.x > width - 60 ? "end" : "start"}
-            >
-              最低 {minVal}℃
-            </text>
-          </g>
-        )}
-      </g>
+      <text 
+        x={x} 
+        y={y} 
+        dx={isRightEdge ? -10 : 10} 
+        dy={isMax ? -15 : 25} 
+        fill={isMax ? "#f43f5e" : "#0ea5e9"}
+        fontSize={16} 
+        fontWeight="900"
+        textAnchor={isRightEdge ? "end" : "start"}
+        style={{ paintOrder: 'stroke', stroke: '#fff', strokeWidth: '3px', strokeLinejoin: 'round' }}
+      >
+        {isMax ? '最高' : '最低'} {value}℃
+      </text>
     );
   };
 
@@ -90,7 +56,6 @@ const CornProduct = () => {
   return (
     <div style={{ fontFamily: 'sans-serif', color: '#333', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
       
-      {/* ヘッダー/ヒーローエリア */}
       <div style={{ position: 'relative', height: '320px', backgroundImage: `url("${heroImagePath}")`, backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#444' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.15)' }} />
         <h1 style={{ color: '#000', fontSize: 'clamp(1.8rem, 7vw, 3.8rem)', fontWeight: '900', zIndex: 1, textShadow: '2px 2px 0 #fff, -2px -2px 0 #fff, 0 0 10px rgba(0,0,0,0.2)' }}>
@@ -114,15 +79,13 @@ const CornProduct = () => {
             </div>
           </div>
           
-          {/* グラフ描画エリア */}
-          <div style={{ width: '100%', height: '400px' }}>
+          <div style={{ width: '100%', height: '430px' }}>
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                {/* - margin.right: 5 ... 右端の余白を極限まで詰める
-                  - margin.left: -25 ... Y軸を隠した分の空白を消す
-                  - margin.top: 40 ... 最高気温ラベルが表示されるスペースを確保 
+                {/* - right: 10 ... ラベルの文字がわずかに右にはみ出せるように微調整
+                  - top: 40 ... 最高気温ラベルが天井にぶつからないように確保 
                 */}
-                <AreaChart data={chartData} margin={{ top: 40, right: 5, left: -25, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 40, right: 10, left: -25, bottom: 0 }}>
                   <defs>
                     <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
@@ -135,10 +98,8 @@ const CornProduct = () => {
                     dataKey="time" 
                     tick={{fontSize: 11, fill: '#64748b', fontWeight: 'bold'}} 
                     dy={10} 
-                    padding={{ left: 0, right: 0 }}
                   />
-                  {/* Y軸の範囲に余裕を持たせてラベルが切れないようにする */}
-                  <YAxis domain={['dataMin - 6', 'dataMax + 6']} hide />
+                  <YAxis domain={['dataMin - 5', 'dataMax + 5']} hide />
                   
                   <Tooltip
                     contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: '8px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', fontSize: '14px', fontWeight: 'bold' }}
@@ -154,11 +115,28 @@ const CornProduct = () => {
                     stroke="#f43f5e" 
                     strokeWidth={4} 
                     fill="url(#tempGradient)"
-                    // アニメーションをオフにすることでラベル座標の計算ミスを防ぎます
                     isAnimationActive={false} 
-                    activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff', fill: '#f43f5e' }}
-                    // Areaのプロパティとしてカスタムラベル関数を注入
-                    label={<CustomLabelLayer />}
+                  />
+
+                  {/* 【解決策】ReferenceDotを使うことで、特定のデータ位置に確実に円とラベルを配置します
+                  */}
+                  <ReferenceDot 
+                    x={chartData.find(d => d.temp === stats.max)?.time} 
+                    y={stats.max} 
+                    r={5} 
+                    fill="#f43f5e" 
+                    stroke="#fff" 
+                    strokeWidth={2}
+                    label={<RenderSpecialLabel isMax={true} />}
+                  />
+                  <ReferenceDot 
+                    x={chartData.find(d => d.temp === stats.min)?.time} 
+                    y={stats.min} 
+                    r={5} 
+                    fill="#0ea5e9" 
+                    stroke="#fff" 
+                    strokeWidth={2}
+                    label={<RenderSpecialLabel isMax={false} />}
                   />
                 </AreaChart>
               </ResponsiveContainer>
