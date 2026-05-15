@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useSensorData } from '../hooks/useSensorData';
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine, LabelList, Tooltip
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine, Tooltip
 } from 'recharts';
 
 const CornProduct = () => {
@@ -19,33 +19,60 @@ const CornProduct = () => {
 
   const { data: rawData, stats, loading } = useSensorData(yesterdayString, yesterdayString);
 
-  /**
-   * グラフ用データの整形: 固定時間をやめ、生のデータをソートするだけに簡略化
-   */
+  // 1. 生データを時間順にソート（固定時間は行わない）
   const chartData = useMemo(() => {
     if (!rawData || rawData.length === 0) return [];
-    
-    // 時間順にソート（これだけでOK）
-    const sortedData = [...rawData].sort((a, b) => a.time.localeCompare(b.time));
-
-    // 重複ラベルを避け、最初に出現した最大・最小地点にフラグを立てる
-    const maxVal = Number(stats.max);
-    const minVal = Number(stats.min);
-    let foundMax = false;
-    let foundMin = false;
-
-    return sortedData.map(d => {
-      const isMax = !foundMax && Number(d.temp) === maxVal;
-      const isMin = !foundMin && Number(d.temp) === minVal;
-      if (isMax) foundMax = true;
-      if (isMin) foundMin = true;
-      return { ...d, isTargetMax: isMax, isTargetMin: isMin };
-    });
-  }, [rawData, stats]);
+    return [...rawData].sort((a, b) => a.time.localeCompare(b.time));
+  }, [rawData]);
 
   if (loading && rawData.length === 0) {
     return <div style={{ textAlign: 'center', padding: '100px 20px', color: '#666' }}>データを読み込み中...</div>;
   }
+
+  // 2. ラベルを「自前で描画」するためのカスタムコンポーネント
+  const CustomLabels = (props) => {
+    const { points, width } = props; // Areaから渡される座標データ
+    if (!points || points.length === 0) return null;
+
+    // 観測データの中での最大・最小値を取得
+    const maxVal = Math.max(...points.map(p => p.value));
+    const minVal = Math.min(...points.map(p => p.value));
+
+    // 最初に出現した最大地点と最小地点の座標を特定
+    const maxPoint = points.find(p => p.value === maxVal);
+    const minPoint = points.find(p => p.value === minVal);
+
+    return (
+      <g>
+        {/* 最高気温ラベル */}
+        {maxPoint && (
+          <g>
+            <circle cx={maxPoint.x} cy={maxPoint.y} r={5} fill="#f43f5e" stroke="#fff" strokeWidth={2} />
+            <text 
+              x={maxPoint.x} y={maxPoint.y} dy={-15} 
+              fill="#f43f5e" fontSize={16} fontWeight="900"
+              textAnchor={maxPoint.x > width - 50 ? "end" : "middle"}
+            >
+              最高 {maxVal}℃
+            </text>
+          </g>
+        )}
+        {/* 最低気温ラベル */}
+        {minPoint && (
+          <g>
+            <circle cx={minPoint.x} cy={minPoint.y} r={5} fill="#0ea5e9" stroke="#fff" strokeWidth={2} />
+            <text 
+              x={minPoint.x} y={minPoint.y} dy={28} 
+              fill="#0ea5e9" fontSize={16} fontWeight="900"
+              textAnchor={minPoint.x > width - 50 ? "end" : "middle"}
+            >
+              最低 {minVal}℃
+            </text>
+          </g>
+        )}
+      </g>
+    );
+  };
 
   return (
     <div style={{ fontFamily: 'sans-serif', color: '#333', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
@@ -94,10 +121,10 @@ const CornProduct = () => {
             </div>
           </div>
           
-          {/* グラフ領域: 右余白をなくす */}
           <div style={{ width: '100%', height: '360px' }}>
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
+                {/* グラフの左右余白を完全になくす(right: 0, left: -25) */}
                 <AreaChart data={chartData} margin={{ top: 40, right: 0, left: -25, bottom: 0 }}>
                   <defs>
                     <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
@@ -107,13 +134,11 @@ const CornProduct = () => {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   
-                  {/* X軸: paddingを最小限に */}
                   <XAxis 
                     dataKey="time" 
                     tick={{fontSize: 10, fill: '#64748b'}} 
                     dy={10}
                     minTickGap={30}
-                    padding={{ left: 10, right: 10 }}
                   />
                   <YAxis domain={['dataMin - 5', 'dataMax + 5']} hide />
                   
@@ -131,37 +156,9 @@ const CornProduct = () => {
                     stroke="#f43f5e" 
                     strokeWidth={3} 
                     fill="url(#tempGradient)"
-                    animationDuration={800}
-                  >
-                    <LabelList 
-                      dataKey="temp" 
-                      content={(props) => {
-                        const { x, y, value, index, payload } = props;
-                        
-                        if (!payload?.isTargetMax && !payload?.isTargetMin) return null;
-                        
-                        const isMax = payload.isTargetMax;
-
-                        // 端っこでのラベル切れ防止
-                        let textAnchor = "middle";
-                        if (index > chartData.length - 5) textAnchor = "end";
-                        if (index < 5) textAnchor = "start";
-
-                        return (
-                          <g key={`label-${index}`}>
-                            <circle cx={x} cy={y} r={5} fill={isMax ? "#f43f5e" : "#0ea5e9"} stroke="#fff" strokeWidth={2} />
-                            <text 
-                              x={x} y={y} dy={isMax ? -18 : 32} 
-                              fill={isMax ? "#f43f5e" : "#0ea5e9"} fontSize={17} fontWeight="900" 
-                              textAnchor={textAnchor}
-                            >
-                              {isMax ? '最高' : '最低'} {value}℃
-                            </text>
-                          </g>
-                        );
-                      }} 
-                    />
-                  </Area>
+                    isAnimationActive={false} // 確実にラベルを座標に合わせるためオフ
+                    label={<CustomLabels />} // ここで自作ラベルを注入
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
