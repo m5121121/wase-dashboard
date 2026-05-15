@@ -20,7 +20,7 @@ const CornProduct = () => {
   const { data: rawData, stats, loading } = useSensorData(yesterdayString, yesterdayString);
 
   /**
-   * グラフ用データの整形: 00:00と23:59を補完して24時間の幅を確保
+   * グラフ用データの整形
    */
   const chartData = useMemo(() => {
     if (!rawData || rawData.length === 0) return [];
@@ -28,7 +28,7 @@ const CornProduct = () => {
     const sortedData = [...rawData].sort((a, b) => a.time.localeCompare(b.time));
     const displayData = [...sortedData];
 
-    // 00:00と23:59の端点を補完（グラフを横いっぱいに広げるため）
+    // 00:00と23:59の端点を補完
     if (displayData[0].time > "00:00") {
       displayData.unshift({ ...displayData[0], time: "00:00" });
     }
@@ -36,8 +36,16 @@ const CornProduct = () => {
       displayData.push({ ...displayData[displayData.length - 1], time: "23:59" });
     }
 
-    return displayData;
-  }, [rawData]);
+    // 重複ラベル防止用：最初に見つかった最高/最低気温のインデックスを特定
+    const maxIndex = displayData.findIndex(d => Number(d.temp) === Number(stats.max));
+    const minIndex = displayData.findIndex(d => Number(d.temp) === Number(stats.min));
+
+    return displayData.map((d, i) => ({
+      ...d,
+      isFirstMax: i === maxIndex,
+      isFirstMin: i === minIndex
+    }));
+  }, [rawData, stats]);
 
   if (loading && rawData.length === 0) {
     return <div style={{ textAlign: 'center', padding: '100px 20px', color: '#666' }}>読み込み中...</div>;
@@ -46,7 +54,6 @@ const CornProduct = () => {
   return (
     <div style={{ fontFamily: 'sans-serif', color: '#333', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
       
-      {/* ヒーローセクション */}
       <div style={{ 
         position: 'relative', height: '280px', 
         backgroundImage: `url("${heroImagePath}")`, 
@@ -69,7 +76,6 @@ const CornProduct = () => {
           boxShadow: '0 4px 25px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0'
         }}>
           
-          {/* ヘッダー・寒暖差バッジ */}
           <div style={{
             display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between',
             alignItems: 'center', gap: '10px', marginBottom: '10px', padding: '0 5px'
@@ -92,11 +98,10 @@ const CornProduct = () => {
             </div>
           </div>
           
-          {/* グラフ領域 */}
           <div style={{ width: '100%', height: '360px' }}>
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 40, right: 35, left: -20, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 40, right: 40, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
@@ -132,18 +137,17 @@ const CornProduct = () => {
                     <LabelList 
                       dataKey="temp" 
                       content={(props) => {
-                        const { x, y, value, index } = props;
+                        const { x, y, value, index, payload } = props;
                         
-                        // stats の値と厳密に一致するかで判定（数値型への変換含む）
-                        const isMax = Number(value) === Number(stats.max);
-                        const isMin = Number(value) === Number(stats.min);
+                        // payloadに含まれる「最初か否か」のフラグで判定
+                        const isMax = payload?.isFirstMax;
+                        const isMin = payload?.isFirstMin;
 
                         if (!isMax && !isMin) return null;
                         
-                        // 端っこでのラベル切れ防止
                         let textAnchor = "middle";
-                        if (index > chartData.length - 5) textAnchor = "end";
-                        if (index < 5) textAnchor = "start";
+                        if (index > chartData.length - 10) textAnchor = "end";
+                        if (index < 10) textAnchor = "start";
 
                         return (
                           <g key={`label-${index}-${value}`}>
