@@ -5,7 +5,19 @@ import {
 } from 'recharts';
 
 const Dashboard = () => {
-  // 1. フックから必要な状態と関数を取得
+  // 💡 1. 「昨日」の日付（YYYY-MM-DD形式）を動的に計算するヘルパー関数
+  const getYesterdayString = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1); // 1日前（昨日）にする
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const yesterday = getYesterdayString(); // 例: "2026-05-16"
+
+  // 2. フックから必要な状態と関数を取得
   const { 
     data, 
     startDate, 
@@ -14,41 +26,57 @@ const Dashboard = () => {
     setEndDate, 
     fetchData, 
     stats,
-    loading
+    loading: hookLoading
   } = useSensorData();
 
-  // 2. 💡カレンダーの文字を自由に動かすための「画面専用ステート」を用意します
-  const [localStartDate, setLocalStartDate] = useState('2026-05-16');
-  const [localEndDate, setLocalEndDate] = useState('2026-05-17');
+  // 💡 3. カレンダーの表示変更をスムーズに行うため、デフォルト値を「昨日」にしたローカルStateを用意
+  const [localStartDate, setLocalStartDate] = useState(yesterday);
+  const [localEndDate, setLocalEndDate] = useState(yesterday);
+  const [isLocalLoading, setIsLocalLoading] = useState(false);
 
-  // 3. 💡初回読み込み時だけ、フックが持っている初期日付をカレンダーに同期させます
+  // 💡 4. 初回ロード時に、フック側の日付も「昨日」に強制的に合わせる
   useEffect(() => {
-    if (startDate) setLocalStartDate(startDate);
-    if (endDate) setLocalEndDate(endDate);
-  }, [startDate, endDate]); // フック側の初期値が確定した瞬間に一度だけ同期
+    setStartDate(yesterday);
+    setEndDate(yesterday);
+    // すでにフック側で初期ロードが走ってしまっている可能性があるため、
+    // 明示的に昨日のデータを一度取りにいきます
+    setTimeout(() => {
+      fetchData();
+    }, 50);
+  }, []);
 
-  // 4. 💡「表示」ボタンを押した時の処理
-  const handleDisplayClick = async () => {
-    // フック側のステートに、カレンダーで選ばれている日付を反映
+  // 💡 5. 「表示」ボタンを押したときの確実なデータ再取得ロジック
+  const handleDisplayClick = () => {
+    setIsLocalLoading(true);
+    
+    // フック側のStateに画面上のカレンダーの値をセット
     setStartDate(localStartDate);
     setEndDate(localEndDate);
     
-    // 状態の書き換えとAPIリクエストの衝突を防ぐため、わずかに遅延を入れてデータを再取得
+    // Reactのステート更新(非同期)が確実に完了した後にAPIリクエストを送るため遅延を入れる
     setTimeout(() => {
       fetchData();
     }, 50);
   };
 
-  // 5. ホバー時にデータが持つ本来の日付と時間を表示するフォーマッタ
+  // データが届いたらローカルの読み込み中表示を解除
+  useEffect(() => {
+    setIsLocalLoading(false);
+  }, [data]);
+
+  const isLoading = hookLoading || isLocalLoading;
+
+  // 💡 6. ホバー（ツールチップ）時の日時表示をデータに完全従属させるフォーマッタ
   const formatTooltipLabel = (value, name) => {
     const activePayload = name?.[0]?.payload;
     if (activePayload) {
+      // データオブジェクトが持っている本来の正確な日付プロパティを取得
       const actualDate = activePayload.date || activePayload.datetime || '';
       if (actualDate) {
-        return `${actualDate} ${value}`; // 例: "2026-05-17 02:24"
+        return `${actualDate} ${value}`; // 例: "2026-05-16 04:36"
       }
     }
-    // バックエンドのデータに日付がない場合は、現在のカレンダーの開始日をベースにする
+    // 万が一データ側に日付がない場合のみ、カレンダーの開始日を結合
     return `${localStartDate} ${value}`;
   };
 
@@ -65,10 +93,9 @@ const Dashboard = () => {
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
           <input 
             type="date" 
-            // 💡 画面専用ステートを結びつけることで、カレンダーの選択変更が即座に画面に反映されます
             value={localStartDate} 
             onChange={(e) => setLocalStartDate(e.target.value)} 
-            disabled={loading}
+            disabled={isLoading}
             style={inputStyle}
           />
           <span style={{ color: '#64748b', fontSize: '0.9rem' }}>〜</span>
@@ -76,16 +103,15 @@ const Dashboard = () => {
             type="date" 
             value={localEndDate} 
             onChange={(e) => setLocalEndDate(e.target.value)} 
-            disabled={loading}
+            disabled={isLoading}
             style={inputStyle}
           />
-          {/* 💡 ボタンを押した時に、上記の同期ロジックを実行します */}
           <button 
             onClick={handleDisplayClick} 
-            disabled={loading} 
-            style={{...buttonStyle, backgroundColor: loading ? '#94a3b8' : '#16a34a'}}
+            disabled={isLoading} 
+            style={{...buttonStyle, backgroundColor: isLoading ? '#94a3b8' : '#16a34a'}}
           >
-            {loading ? '読込中...' : '表示'}
+            {isLoading ? '読込中...' : '表示'}
           </button>
         </div>
       </header>
@@ -94,15 +120,15 @@ const Dashboard = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '16px' }}>
         <div style={cardStyle}>
           <p style={labelStyle}>最高気温</p>
-          <p style={valueStyle}>{loading ? '--' : (stats?.max ?? '--')} <span style={unitStyle}>℃</span></p>
+          <p style={valueStyle}>{isLoading ? '--' : (stats?.max ?? '--')} <span style={unitStyle}>℃</span></p>
         </div>
         <div style={cardStyle}>
           <p style={labelStyle}>最低気温</p>
-          <p style={valueStyle}>{loading ? '--' : (stats?.min ?? '--')} <span style={unitStyle}>℃</span></p>
+          <p style={valueStyle}>{isLoading ? '--' : (stats?.min ?? '--')} <span style={unitStyle}>℃</span></p>
         </div>
         <div style={{...cardStyle, borderLeft: '5px solid #ea580c', background: '#fff7ed', gridColumn: 'span 2'}}>
           <p style={{...labelStyle, color: '#c2410c'}}>寒暖差（最大-最小）</p>
-          <p style={{...valueStyle, color: '#ea580c'}}>{loading ? '--' : (stats?.diff ?? '--')} <span style={unitStyle}>℃</span></p>
+          <p style={{...valueStyle, color: '#ea580c'}}>{isLoading ? '--' : (stats?.diff ?? '--')} <span style={unitStyle}>℃</span></p>
         </div>
       </div>
 
@@ -114,7 +140,7 @@ const Dashboard = () => {
 
         <div style={{ width: '100%', height: '420px', position: 'relative' }}>
           
-          {loading ? (
+          {isLoading ? (
             <div style={loadingOverlayStyle}>
               <div style={spinnerStyle}></div>
               <p style={{ margin: '12px 0 0 0', fontSize: '0.9rem', color: '#64748b', fontWeight: '600' }}>
@@ -173,7 +199,7 @@ const Dashboard = () => {
   );
 };
 
-// スタイル定義
+// スタイル定義（変更なし）
 const cardStyle = { backgroundColor: 'white', padding: '14px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' };
 const labelStyle = { color: '#64748b', fontSize: '0.75rem', marginBottom: '4px', fontWeight: '500', margin: 0 };
 const valueStyle = { fontSize: '1.6rem', fontWeight: '900', color: '#1e293b', lineHeight: '1', margin: 0 };
