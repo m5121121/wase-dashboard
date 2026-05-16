@@ -1,20 +1,27 @@
-import React, { useState } from 'react';
-// hooks のパスがプロジェクトと合っているか念のためご確認ください
+import React, { useEffect } from 'react';
 import { useSensorData } from '../hooks/useSensorData'; 
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
 
 const Dashboard = () => {
-  // ──【変更点】開始日と終了日のデフォルト値をグラフのデータ（2026-05-15）に設定 ──
-  const [startDate, setStartDate] = useState('2026-05-15');
-  const [endDate, setEndDate] = useState('2026-05-15');
+  // フックから日付状態（startDate, endDate）と変更関数（setStartDate, setEndDate）を取得
+  const { 
+    data, 
+    startDate, 
+    setStartDate, 
+    endDate, 
+    setEndDate, 
+    fetchData, 
+    stats 
+  } = useSensorData();
 
-  // カスタムフック側が内部で独自の状態を持っている場合は、以下のように同期させます
-  const sensorProps = useSensorData();
-  const data = sensorProps.data;
-  const stats = sensorProps.stats || { max: '--', min: '--', diff: '--' };
-  const fetchData = sensorProps.fetchData;
+  // ──【変更点】画面が初めて開いたときに、初期値として 2026-05-15 をセットする ──
+  useEffect(() => {
+    // コンポーネント読み込み時にフック側の状態を初期化
+    if (!startDate) setStartDate('2026-05-15');
+    if (!endDate) setEndDate('2026-05-15');
+  }, []);
 
   return (
     <div style={{ padding: '12px', backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'sans-serif' }}>
@@ -25,22 +32,23 @@ const Dashboard = () => {
           🚜 裏磐梯農園 管理ダッシュボード
         </h1>
         
-        {/* 日付選択コントロール（デフォルトで 2026-05-15 が入ります） */}
+        {/* 日付選択コントロール */}
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
           <input 
             type="date" 
-            value={startDate} 
-            onChange={(e) => setStartDate(e.target.value)} 
+            value={startDate || '2026-05-15'} 
+            onChange={(e) => setStartDate(e.target.value)} // ここでフックの状態を直接変更します
             style={inputStyle}
           />
           <span style={{ color: '#64748b', fontSize: '0.9rem' }}>〜</span>
           <input 
             type="date" 
-            value={endDate} 
-            onChange={(e) => setEndDate(e.target.value)} 
+            value={endDate || '2026-05-15'} 
+            onChange={(e) => setEndDate(e.target.value)} // ここでフックの状態を直接変更します
             style={inputStyle}
           />
-          <button onClick={() => fetchData(startDate, endDate)} style={buttonStyle}>表示</button>
+          {/* ボタンクリックで、更新された日付を元にデータを再取得 */}
+          <button onClick={fetchData} style={buttonStyle}>表示</button>
         </div>
       </header>
 
@@ -48,29 +56,28 @@ const Dashboard = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '16px' }}>
         <div style={cardStyle}>
           <p style={labelStyle}>最高気温</p>
-          <p style={valueStyle}>{stats.max} <span style={unitStyle}>℃</span></p>
+          <p style={valueStyle}>{stats?.max ?? '--'} <span style={unitStyle}>℃</span></p>
         </div>
         <div style={cardStyle}>
           <p style={labelStyle}>最低気温</p>
-          <p style={valueStyle}>{stats.min} <span style={unitStyle}>℃</span></p>
+          <p style={valueStyle}>{stats?.min ?? '--'} <span style={unitStyle}>℃</span></p>
         </div>
         <div style={{...cardStyle, borderLeft: '5px solid #ea580c', background: '#fff7ed', gridColumn: 'span 2'}}>
           <p style={{...labelStyle, color: '#c2410c'}}>寒暖差（最大-最小）</p>
-          <p style={{...valueStyle, color: '#ea580c'}}>{stats.diff} <span style={unitStyle}>℃</span></p>
+          <p style={{...valueStyle, color: '#ea580c'}}>{stats?.diff ?? '--'} <span style={unitStyle}>℃</span></p>
         </div>
       </div>
 
-      {/* グラフコンテナ（白いカード枠、左右の余白を完全ゼロに） */}
+      {/* グラフコンテナ（白い外枠カード）左右の余白をカット */}
       <div style={graphContainerStyle}>
-        {/* ──【変更点】「※M5Stack(ENV III)〜」の文言を完全に削除 ── */}
+        {/* 「※M5Stack(ENV III)〜」の文言を完全に排除 */}
         <div style={{ padding: '0 16px 10px 16px', borderBottom: '1px solid #f1f5f9', marginBottom: '10px' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 'bold', margin: 0 }}>気温・湿度推移</h2>
         </div>
 
-        {/* グラフ描画エリア（横幅いっぱい） */}
+        {/* グラフ描画エリア */}
         <div style={{ width: '100%', height: '420px' }}>
           <ResponsiveContainer width="100%" height="100%">
-            {/* 左右のマージンをマイナス値にして、左右の目盛りをカードのフチギリギリまで広げる */}
             <AreaChart data={data} margin={{ top: 10, right: -12, left: -32, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
@@ -84,7 +91,6 @@ const Dashboard = () => {
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
               
-              {/* X軸（時間） */}
               <XAxis 
                 dataKey="time" 
                 stroke="#64748b" 
@@ -94,7 +100,6 @@ const Dashboard = () => {
                 dy={6}
               />
               
-              {/* Y軸（左右2軸のフォントを極小化し余白を詰める） */}
               <YAxis yAxisId="left" stroke="#f43f5e" fontSize={10} tickLine={false} axisLine={false} unit="℃" />
               <YAxis yAxisId="right" orientation="right" stroke="#0ea5e9" fontSize={10} tickLine={false} axisLine={false} unit="%" />
               
@@ -102,7 +107,6 @@ const Dashboard = () => {
                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '13px' }}
               />
               
-              {/* 気温グラフ線 */}
               <Area 
                 yAxisId="left" 
                 type="monotone" 
@@ -114,7 +118,6 @@ const Dashboard = () => {
                 name="気温" 
               />
               
-              {/* 湿度グラフ線 */}
               <Area 
                 yAxisId="right" 
                 type="monotone" 
@@ -133,14 +136,12 @@ const Dashboard = () => {
   );
 };
 
-// スタイル定義
+// スタイル定義（変更なし）
 const cardStyle = { backgroundColor: 'white', padding: '14px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' };
 const labelStyle = { color: '#64748b', fontSize: '0.75rem', marginBottom: '4px', fontWeight: '500', margin: 0 };
 const valueStyle = { fontSize: '1.6rem', fontWeight: '900', color: '#1e293b', lineHeight: '1', margin: 0 };
 const unitStyle = { fontSize: '0.85rem', fontWeight: 'normal', marginLeft: '2px' };
-
 const graphContainerStyle = { backgroundColor: 'white', padding: '14px 0px 8px 0px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', overflow: 'hidden' };
-
 const inputStyle = { padding: '8px 4px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem', width: '32%', maxWidth: '120px', textAlign: 'center', backgroundColor: '#fff', webkitAppearance: 'none' };
 const buttonStyle = { padding: '8px 12px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem', flexShrink: 0 };
 
