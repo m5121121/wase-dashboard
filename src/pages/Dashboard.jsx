@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSensorData } from '../hooks/useSensorData'; 
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
 
 const Dashboard = () => {
-  // 1. 💡 フックが持つ状態と関数をそのままシンプルに信用して使います
+  // 1. フックから必要な状態と関数を取得
   const { 
     data, 
     startDate, 
@@ -17,18 +17,39 @@ const Dashboard = () => {
     loading
   } = useSensorData();
 
-  // 2. 💡 ホバー時にデータが持つ本来の日付と時間を綺麗に表示するフォーマッタ
+  // 2. 💡カレンダーの文字を自由に動かすための「画面専用ステート」を用意します
+  const [localStartDate, setLocalStartDate] = useState('2026-05-16');
+  const [localEndDate, setLocalEndDate] = useState('2026-05-17');
+
+  // 3. 💡初回読み込み時だけ、フックが持っている初期日付をカレンダーに同期させます
+  useEffect(() => {
+    if (startDate) setLocalStartDate(startDate);
+    if (endDate) setLocalEndDate(endDate);
+  }, [startDate, endDate]); // フック側の初期値が確定した瞬間に一度だけ同期
+
+  // 4. 💡「表示」ボタンを押した時の処理
+  const handleDisplayClick = async () => {
+    // フック側のステートに、カレンダーで選ばれている日付を反映
+    setStartDate(localStartDate);
+    setEndDate(localEndDate);
+    
+    // 状態の書き換えとAPIリクエストの衝突を防ぐため、わずかに遅延を入れてデータを再取得
+    setTimeout(() => {
+      fetchData();
+    }, 50);
+  };
+
+  // 5. ホバー時にデータが持つ本来の日付と時間を表示するフォーマッタ
   const formatTooltipLabel = (value, name) => {
     const activePayload = name?.[0]?.payload;
     if (activePayload) {
-      // データオブジェクト内に存在する正確な日付（date）を取得
       const actualDate = activePayload.date || activePayload.datetime || '';
       if (actualDate) {
         return `${actualDate} ${value}`; // 例: "2026-05-17 02:24"
       }
     }
-    // 日付キーがない場合のフォールバック（カレンダーの開始日を表示）
-    return startDate ? `${startDate} ${value}` : value;
+    // バックエンドのデータに日付がない場合は、現在のカレンダーの開始日をベースにする
+    return `${localStartDate} ${value}`;
   };
 
   return (
@@ -44,23 +65,23 @@ const Dashboard = () => {
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
           <input 
             type="date" 
-            // 💡 フックの startDate をそのままバインド（空文字による「年/月/日」化を防ぐため、フォールバック値を持たせます）
-            value={startDate || '2026-05-16'} 
-            onChange={(e) => setStartDate(e.target.value)} 
+            // 💡 画面専用ステートを結びつけることで、カレンダーの選択変更が即座に画面に反映されます
+            value={localStartDate} 
+            onChange={(e) => setLocalStartDate(e.target.value)} 
             disabled={loading}
             style={inputStyle}
           />
           <span style={{ color: '#64748b', fontSize: '0.9rem' }}>〜</span>
           <input 
             type="date" 
-            value={endDate || '2026-05-17'} 
-            onChange={(e) => setEndDate(e.target.value)} 
+            value={localEndDate} 
+            onChange={(e) => setLocalEndDate(e.target.value)} 
             disabled={loading}
             style={inputStyle}
           />
-          {/* 💡 ボタンを押した時は、フックの fetchData を叩くだけにします */}
+          {/* 💡 ボタンを押した時に、上記の同期ロジックを実行します */}
           <button 
-            onClick={fetchData} 
+            onClick={handleDisplayClick} 
             disabled={loading} 
             style={{...buttonStyle, backgroundColor: loading ? '#94a3b8' : '#16a34a'}}
           >
@@ -127,7 +148,6 @@ const Dashboard = () => {
                 <YAxis yAxisId="left" stroke="#f43f5e" fontSize={10} tickLine={false} axisLine={false} unit="℃" />
                 <YAxis yAxisId="right" orientation="right" stroke="#0ea5e9" fontSize={10} tickLine={false} axisLine={false} unit="%" />
                 
-                {/* 💡 ツールチップの表示関数をシンプルな生データ参照に修正 */}
                 <Tooltip 
                   labelFormatter={(value, name) => formatTooltipLabel(value, name)}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '13px' }}
@@ -153,7 +173,7 @@ const Dashboard = () => {
   );
 };
 
-// スタイル定義（変更なし）
+// スタイル定義
 const cardStyle = { backgroundColor: 'white', padding: '14px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' };
 const labelStyle = { color: '#64748b', fontSize: '0.75rem', marginBottom: '4px', fontWeight: '500', margin: 0 };
 const valueStyle = { fontSize: '1.6rem', fontWeight: '900', color: '#1e293b', lineHeight: '1', margin: 0 };
