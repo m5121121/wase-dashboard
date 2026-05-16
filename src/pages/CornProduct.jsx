@@ -5,26 +5,24 @@ import {
 } from 'recharts';
 
 /**
- * 【100%描画確定】各データ点に直接介入するカスタムドットコンポーネント
- * Rechartsが線を引くループの中で、最高・最低のインデックスに一致した瞬間だけ強制定着させます。
+ * 最高・最低気温のカスタムラベル（文字サイズ拡大版）
  */
 const CustomMaxMinDot = (props) => {
-  // cx, cy, index は Recharts から自動的に1点ずつ注入されます
   const { cx, cy, index, maxIndex, minIndex, maxVal, minVal, dataLength } = props;
 
-  // 1. 最高気温の点に達した場合
+  // 1. 最高気温の点（文字サイズを大きく調整）
   if (index === maxIndex) {
-    const isRightEdge = index > dataLength * 0.85; // 右端での文字切れ防止
+    const isRightEdge = index > dataLength * 0.85;
     return (
       <g id="forced-max-label">
-        <circle cx={cx} cy={cy} r={6} fill="#f43f5e" stroke="#fff" strokeWidth={3} />
+        <circle cx={cx} cy={cy} r={7} fill="#f43f5e" stroke="#fff" strokeWidth={3} />
         <text
           x={cx}
           y={cy}
-          dx={isRightEdge ? -12 : 12}
-          dy={-15}
+          dx={isRightEdge ? -15 : 15} // 文字サイズに合わせて余白を少し拡大
+          dy={-18}                   // 文字がドットに被らないよう少し上に引き上げ
           fill="#f43f5e"
-          fontSize={15}
+          fontSize={20}              // ★15から20にサイズアップ！
           fontWeight="900"
           textAnchor={isRightEdge ? "end" : "start"}
           style={{ paintOrder: 'stroke', stroke: '#fff', strokeWidth: '4px', strokeLinejoin: 'round' }}
@@ -35,19 +33,19 @@ const CustomMaxMinDot = (props) => {
     );
   }
 
-  // 2. 最低気温の点に達した場合
+  // 2. 最低気温の点（文字サイズを大きく調整）
   if (index === minIndex) {
-    const isRightEdge = index > dataLength * 0.85; // 右端での文字切れ防止
+    const isRightEdge = index > dataLength * 0.85;
     return (
       <g id="forced-min-label">
-        <circle cx={cx} cy={cy} r={6} fill="#0ea5e9" stroke="#fff" strokeWidth={3} />
+        <circle cx={cx} cy={cy} r={7} fill="#0ea5e9" stroke="#fff" strokeWidth={3} />
         <text
           x={cx}
           y={cy}
-          dx={isRightEdge ? -12 : 12}
-          dy={25}
+          dx={isRightEdge ? -15 : 15} // 文字サイズに合わせて余白を少し拡大
+          dy={32}                    // 文字が大きくなった分、少し下側に余裕を持たせる
           fill="#0ea5e9"
-          fontSize={15}
+          fontSize={20}              // ★15から20にサイズアップ！
           fontWeight="900"
           textAnchor={isRightEdge ? "end" : "start"}
           style={{ paintOrder: 'stroke', stroke: '#fff', strokeWidth: '4px', strokeLinejoin: 'round' }}
@@ -58,7 +56,6 @@ const CustomMaxMinDot = (props) => {
     );
   }
 
-  // それ以外の普通の点は何も描画しない（ドットなし）
   return null;
 };
 
@@ -82,7 +79,6 @@ const CornProduct = () => {
     return [...rawData].sort((a, b) => a.time.localeCompare(b.time));
   }, [rawData]);
 
-  // 配列の中から「最高気温」「最低気温」を取っている配列のインデックス（何番目か）を確実に特定する
   const { maxIndex, minIndex } = useMemo(() => {
     if (!chartData || chartData.length === 0) return { maxIndex: -1, minIndex: -1 };
     let maxIdx = 0;
@@ -127,7 +123,7 @@ const CornProduct = () => {
           <div style={{ width: '100%', height: '450px' }}>
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 40, right: 10, left: -25, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 40, right: 15, left: -25, bottom: 0 }}>
                   <defs>
                     <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
@@ -148,11 +144,9 @@ const CornProduct = () => {
                     formatter={(val) => [`${val} ℃`, '気温']}
                   />
 
-                  {/* 補助線点線はそのまま維持（画像で綺麗に出ているため） */}
                   <ReferenceLine y={stats.max} stroke="#f43f5e" strokeWidth={1} strokeDasharray="4 4" />
                   <ReferenceLine y={stats.min} stroke="#0ea5e9" strokeWidth={1} strokeDasharray="4 4" />
 
-                  {/* 解決策: dot属性にカスタムドットコンポーネントを直接注入。これで100%描画されます */}
                   <Area 
                     type="monotone" 
                     dataKey="temp" 
