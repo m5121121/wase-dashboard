@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 
 const Dashboard = () => {
-  // 1. フックから必要な関数と状態を取得
+  // 1. フックから必要な関数と状態を取得（フックが loading を持っていればそれも取得）
   const { 
     data, 
     startDate, 
@@ -13,33 +13,47 @@ const Dashboard = () => {
     endDate, 
     setEndDate, 
     fetchData, 
-    stats 
+    stats,
+    loading: hookLoading // フック側がloadingを提供している場合はこれと連動
   } = useSensorData();
 
-  // 2. 💡初期値を最新データの「2026-05-16」に設定し、完全に独立したステートで管理します
+  // カレンダー用の独立ステート
   const [localStartDate, setLocalStartDate] = useState('2026-05-16');
   const [localEndDate, setLocalEndDate] = useState('2026-05-16');
+  
+  // 💡【新設】ダッシュボード側で管理するローディング状態
+  const [isLocalLoading, setIsLocalLoading] = useState(false);
 
-  // 3. 💡フック側の強制書き戻しによるバグを防ぐため、初回起動時のみ同期させます
+  // 初回起動時のみカレンダーの日付を同期
   useEffect(() => {
     if (startDate) setLocalStartDate(startDate);
     if (endDate) setLocalEndDate(endDate);
-  }, []); // 空配列にすることで、初回以外はカレンダーの文字が勝手に戻らなくなります
+  }, []);
 
-  // 4. 「表示」ボタンを押した時の処理
+  // 💡 フック側のデータが更新されたら、ローカルのローディングを自動で解除する
+  useEffect(() => {
+    setIsLocalLoading(false);
+  }, [data]);
+
+  // 「表示」ボタンを押した時の処理
   const handleDisplayClick = () => {
+    // 💡 ボタンを押した瞬間に処理中（ローディング）にする
+    setIsLocalLoading(true);
+
     setStartDate(localStartDate);
     setEndDate(localEndDate);
     
-    // 状態が確実に反映されてからデータ再取得をかけるため、わずかに遅延を入れます
     setTimeout(() => {
+      // データの再取得を実行（非同期）
       fetchData();
     }, 50);
   };
 
-  // 5. 💡ホバー（ツールチップ）時のタイトルを「日付 + 時間」の形式に整形する関数
+  // 💡 どちらかのローディングが true であれば「処理中」とみなす
+  const isLoading = hookLoading || isLocalLoading;
+
+  // ホバー（ツールチップ）時のタイトルフォーマッタ
   const formatTooltipLabel = (timeLabel) => {
-    // localStartDate (例: "2026-05-16") とデータの時間 (例: "12:00") を結合
     return `${localStartDate} ${timeLabel}`;
   };
 
@@ -58,6 +72,7 @@ const Dashboard = () => {
             type="date" 
             value={localStartDate} 
             onChange={(e) => setLocalStartDate(e.target.value)} 
+            disabled={isLoading} // 💡 処理中は入力不可にする
             style={inputStyle}
           />
           <span style={{ color: '#64748b', fontSize: '0.9rem' }}>〜</span>
@@ -65,9 +80,17 @@ const Dashboard = () => {
             type="date" 
             value={localEndDate} 
             onChange={(e) => setLocalEndDate(e.target.value)} 
+            disabled={isLoading} // 💡 処理中は入力不可にする
             style={inputStyle}
           />
-          <button onClick={handleDisplayClick} style={buttonStyle}>表示</button>
+          {/* 💡 処理中はボタン文言を変えて無効化 */}
+          <button 
+            onClick={handleDisplayClick} 
+            disabled={isLoading} 
+            style={{...buttonStyle, backgroundColor: isLoading ? '#94a3b8' : '#16a34a'}}
+          >
+            {isLoading ? '読込中...' : '表示'}
+          </button>
         </div>
       </header>
 
@@ -75,15 +98,15 @@ const Dashboard = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '16px' }}>
         <div style={cardStyle}>
           <p style={labelStyle}>最高気温</p>
-          <p style={valueStyle}>{stats?.max ?? '--'} <span style={unitStyle}>℃</span></p>
+          <p style={valueStyle}>{isLoading ? '--' : (stats?.max ?? '--')} <span style={unitStyle}>℃</span></p>
         </div>
         <div style={cardStyle}>
           <p style={labelStyle}>最低気温</p>
-          <p style={valueStyle}>{stats?.min ?? '--'} <span style={unitStyle}>℃</span></p>
+          <p style={valueStyle}>{isLoading ? '--' : (stats?.min ?? '--')} <span style={unitStyle}>℃</span></p>
         </div>
         <div style={{...cardStyle, borderLeft: '5px solid #ea580c', background: '#fff7ed', gridColumn: 'span 2'}}>
           <p style={{...labelStyle, color: '#c2410c'}}>寒暖差（最大-最小）</p>
-          <p style={{...valueStyle, color: '#ea580c'}}>{stats?.diff ?? '--'} <span style={unitStyle}>℃</span></p>
+          <p style={{...valueStyle, color: '#ea580c'}}>{isLoading ? '--' : (stats?.diff ?? '--')} <span style={unitStyle}>℃</span></p>
         </div>
       </div>
 
@@ -93,67 +116,67 @@ const Dashboard = () => {
           <h2 style={{ fontSize: '1rem', fontWeight: 'bold', margin: 0 }}>気温・湿度推移</h2>
         </div>
 
-        {/* グラフ描画エリア */}
-        <div style={{ width: '100%', height: '420px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 10, right: -12, left: -32, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.15}/>
-                  <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
-                </linearGradient>
-                <linearGradient id="colorHumi" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.12}/>
-                  <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-              
-              <XAxis 
-                dataKey="time" 
-                stroke="#64748b" 
-                fontSize={10} 
-                tickLine={false} 
-                axisLine={false}
-                dy={6}
-              />
-              
-              <YAxis yAxisId="left" stroke="#f43f5e" fontSize={10} tickLine={false} axisLine={false} unit="℃" />
-              <YAxis yAxisId="right" orientation="right" stroke="#0ea5e9" fontSize={10} tickLine={false} axisLine={false} unit="%" />
-              
-              {/* 💡 labelFormatter を指定して、ホバー時に日時（YYYY-MM-DD HH:MM）で表示されるようにします */}
-              <Tooltip 
-                labelFormatter={formatTooltipLabel}
-                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '13px' }}
-              />
-              
-              {/* 気温レイヤー */}
-              <Area 
-                yAxisId="left" 
-                type="monotone" 
-                dataKey="temp" 
-                stroke="#f43f5e" 
-                strokeWidth={2.5} 
-                fillOpacity={1} 
-                fill="url(#colorTemp)" 
-                name="気温" 
-              />
-              
-              {/* 湿度レイヤー */}
-              <Area 
-                yAxisId="right" 
-                type="monotone" 
-                dataKey="humi" 
-                stroke="#0ea5e9" 
-                strokeWidth={2.5} 
-                fillOpacity={1} 
-                fill="url(#colorHumi)" 
-                name="湿度" 
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+        {/* グラフ描画エリア（読み込み中はぐるぐるを表示） */}
+        <div style={{ width: '100%', height: '420px', position: 'relative' }}>
+          
+          {isLoading ? (
+            // 💡【新設】処理中のオーバーレイ表示（CSSアニメーションで回るスピナー）
+            <div style={loadingOverlayStyle}>
+              <div style={spinnerStyle}></div>
+              <p style={{ margin: '12px 0 0 0', fontSize: '0.9rem', color: '#64748b', fontWeight: '600' }}>
+                データを取得しています...
+              </p>
+            </div>
+          ) : (
+            // 通常のグラフ表示
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data} margin={{ top: 10, right: -12, left: -32, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.15}/>
+                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorHumi" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.12}/>
+                    <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                
+                <XAxis 
+                  dataKey="time" 
+                  stroke="#64748b" 
+                  fontSize={10} 
+                  tickLine={false} 
+                  axisLine={false}
+                  dy={6}
+                />
+                
+                <YAxis yAxisId="left" stroke="#f43f5e" fontSize={10} tickLine={false} axisLine={false} unit="℃" />
+                <YAxis yAxisId="right" orientation="right" stroke="#0ea5e9" fontSize={10} tickLine={false} axisLine={false} unit="%" />
+                
+                <Tooltip 
+                  labelFormatter={formatTooltipLabel}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '13px' }}
+                />
+                
+                <Area yAxisId="left" type="monotone" dataKey="temp" stroke="#f43f5e" strokeWidth={2.5} fillOpacity={1} fill="url(#colorTemp)" name="気温" />
+                <Area yAxisId="right" type="monotone" dataKey="humi" stroke="#0ea5e9" strokeWidth={2.5} fillOpacity={1} fill="url(#colorHumi)" name="湿度" />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+          
         </div>
       </div>
+
+      {/* 💡 スピナーをぐるぐる回転させるためのインラインCSSアニメーション定義 */}
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+
     </div>
   );
 };
@@ -165,6 +188,10 @@ const valueStyle = { fontSize: '1.6rem', fontWeight: '900', color: '#1e293b', li
 const unitStyle = { fontSize: '0.85rem', fontWeight: 'normal', marginLeft: '2px' };
 const graphContainerStyle = { backgroundColor: 'white', padding: '14px 0px 8px 0px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', overflow: 'hidden' };
 const inputStyle = { padding: '8px 4px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem', width: '32%', maxWidth: '120px', textAlign: 'center', backgroundColor: '#fff', webkitAppearance: 'none' };
-const buttonStyle = { padding: '8px 12px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem', flexShrink: 0 };
+const buttonStyle = { padding: '8px 12px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem', flexShrink: 0, transition: 'background-color 0.2s' };
+
+// 💡【新設】ローディング画面とスピナーのスタイル
+const loadingOverlayStyle = { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.85)', zIndex: 10 };
+const spinnerStyle = { width: '40px', height: '40px', border: '4px solid #f3f3f3', borderTop: '4px solid #16a34a', borderRadius: '50%', animation: 'spin 1s linear infinite' };
 
 export default Dashboard;
