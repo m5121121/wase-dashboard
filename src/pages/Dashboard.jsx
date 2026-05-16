@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useSensorData } from '../hooks/useSensorData'; 
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
 
 const Dashboard = () => {
+  // 1. 💡 フックが持つ状態と関数をそのままシンプルに信用して使います
   const { 
     data, 
     startDate, 
@@ -13,81 +14,21 @@ const Dashboard = () => {
     setEndDate, 
     fetchData, 
     stats,
-    loading: hookLoading
+    loading
   } = useSensorData();
 
-  // カレンダー用の独立ステート（初期値を5/16〜5/17に変更）
-  const [localStartDate, setLocalStartDate] = useState('2026-05-16');
-  const [localEndDate, setLocalEndDate] = useState('2026-05-17');
-  const [isLocalLoading, setIsLocalLoading] = useState(false);
-
-  useEffect(() => {
-    if (startDate) setLocalStartDate(startDate);
-    if (endDate) setLocalEndDate(endDate);
-  }, []);
-
-  useEffect(() => {
-    setIsLocalLoading(false);
-  }, [data]);
-
-  const handleDisplayClick = () => {
-    setIsLocalLoading(true);
-    setStartDate(localStartDate);
-    setEndDate(localEndDate);
-    setTimeout(() => {
-      fetchData();
-    }, 50);
-  };
-
-  const isLoading = hookLoading || isLocalLoading;
-
-  // 💡【大幅改良】どのようなデータ構造でもホバー日時を絶対に狂わせないフォーマッタ
-  const formatTooltipLabel = (value, name, props) => {
-    // 1. props の中からホバーしている要素のインデックス（順番）や生データを取得
-    const tooltipItem = name?.[0];
-    const activePayload = tooltipItem?.payload;
-
+  // 2. 💡 ホバー時にデータが持つ本来の日付と時間を綺麗に表示するフォーマッタ
+  const formatTooltipLabel = (value, name) => {
+    const activePayload = name?.[0]?.payload;
     if (activePayload) {
-      // 2. もしデータ自体に明確に日付キーが存在すればそれを最優先（一応残す）
-      const anyDateKey = activePayload.date || activePayload.datetime || activePayload.formatted_date;
-      if (anyDateKey) {
-        return `${anyDateKey} ${activePayload.time || value}`;
-      }
-
-      // 3. 【解決策の要】データに日付がない場合、X軸の全体のデータ件数と現在位置から日付を推測
-      if (data && data.length > 0) {
-        // ホバーしているデータが全体の中でどの位置にあるか割合を計算
-        const activeIndex = data.findIndex(item => item.time === value);
-        
-        if (activeIndex !== -1) {
-          const start = new Date(localStartDate);
-          const end = new Date(localEndDate);
-          
-          // 開始日と終了日の日数の差を計算
-          const dayDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-          
-          if (dayDiff > 0) {
-            // 全体の進捗度（0.0 〜 1.0）を出す
-            const progress = activeIndex / (data.length - 1 || 1);
-            // 進捗度に応じて、開始日に日数を足す
-            const daysToAdd = Math.round(progress * dayDiff);
-            
-            const calculatedDate = new Date(start);
-            calculatedDate.setDate(start.getDate() + daysToAdd);
-            
-            // YYYY-MM-DD 形式に整形
-            const yyyy = calculatedDate.getFullYear();
-            const mm = String(calculatedDate.getMonth() + 1).padStart(2, '0');
-            const dd = String(calculatedDate.getDate()).padStart(2, '0');
-            
-            return `${yyyy}-${mm}-${dd} ${value}`;
-          }
-        }
+      // データオブジェクト内に存在する正確な日付（date）を取得
+      const actualDate = activePayload.date || activePayload.datetime || '';
+      if (actualDate) {
+        return `${actualDate} ${value}`; // 例: "2026-05-17 02:24"
       }
     }
-    
-    // 4. 万が一計算できなかった場合の安全なフォールバック
-    return `${localStartDate} ${value}`;
+    // 日付キーがない場合のフォールバック（カレンダーの開始日を表示）
+    return startDate ? `${startDate} ${value}` : value;
   };
 
   return (
@@ -103,25 +44,27 @@ const Dashboard = () => {
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
           <input 
             type="date" 
-            value={localStartDate} 
-            onChange={(e) => setLocalStartDate(e.target.value)} 
-            disabled={isLoading}
+            // 💡 フックの startDate をそのままバインド（空文字による「年/月/日」化を防ぐため、フォールバック値を持たせます）
+            value={startDate || '2026-05-16'} 
+            onChange={(e) => setStartDate(e.target.value)} 
+            disabled={loading}
             style={inputStyle}
           />
           <span style={{ color: '#64748b', fontSize: '0.9rem' }}>〜</span>
           <input 
             type="date" 
-            value={localEndDate} 
-            onChange={(e) => setLocalEndDate(e.target.value)} 
-            disabled={isLoading}
+            value={endDate || '2026-05-17'} 
+            onChange={(e) => setEndDate(e.target.value)} 
+            disabled={loading}
             style={inputStyle}
           />
+          {/* 💡 ボタンを押した時は、フックの fetchData を叩くだけにします */}
           <button 
-            onClick={handleDisplayClick} 
-            disabled={isLoading} 
-            style={{...buttonStyle, backgroundColor: isLoading ? '#94a3b8' : '#16a34a'}}
+            onClick={fetchData} 
+            disabled={loading} 
+            style={{...buttonStyle, backgroundColor: loading ? '#94a3b8' : '#16a34a'}}
           >
-            {isLoading ? '読込中...' : '表示'}
+            {loading ? '読込中...' : '表示'}
           </button>
         </div>
       </header>
@@ -130,15 +73,15 @@ const Dashboard = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '16px' }}>
         <div style={cardStyle}>
           <p style={labelStyle}>最高気温</p>
-          <p style={valueStyle}>{isLoading ? '--' : (stats?.max ?? '--')} <span style={unitStyle}>℃</span></p>
+          <p style={valueStyle}>{loading ? '--' : (stats?.max ?? '--')} <span style={unitStyle}>℃</span></p>
         </div>
         <div style={cardStyle}>
           <p style={labelStyle}>最低気温</p>
-          <p style={valueStyle}>{isLoading ? '--' : (stats?.min ?? '--')} <span style={unitStyle}>℃</span></p>
+          <p style={valueStyle}>{loading ? '--' : (stats?.min ?? '--')} <span style={unitStyle}>℃</span></p>
         </div>
         <div style={{...cardStyle, borderLeft: '5px solid #ea580c', background: '#fff7ed', gridColumn: 'span 2'}}>
           <p style={{...labelStyle, color: '#c2410c'}}>寒暖差（最大-最小）</p>
-          <p style={{...valueStyle, color: '#ea580c'}}>{isLoading ? '--' : (stats?.diff ?? '--')} <span style={unitStyle}>℃</span></p>
+          <p style={{...valueStyle, color: '#ea580c'}}>{loading ? '--' : (stats?.diff ?? '--')} <span style={unitStyle}>℃</span></p>
         </div>
       </div>
 
@@ -150,7 +93,7 @@ const Dashboard = () => {
 
         <div style={{ width: '100%', height: '420px', position: 'relative' }}>
           
-          {isLoading ? (
+          {loading ? (
             <div style={loadingOverlayStyle}>
               <div style={spinnerStyle}></div>
               <p style={{ margin: '12px 0 0 0', fontSize: '0.9rem', color: '#64748b', fontWeight: '600' }}>
@@ -184,9 +127,9 @@ const Dashboard = () => {
                 <YAxis yAxisId="left" stroke="#f43f5e" fontSize={10} tickLine={false} axisLine={false} unit="℃" />
                 <YAxis yAxisId="right" orientation="right" stroke="#0ea5e9" fontSize={10} tickLine={false} axisLine={false} unit="%" />
                 
-                {/* 💡 ツールチップのデータ連携を修正 */}
+                {/* 💡 ツールチップの表示関数をシンプルな生データ参照に修正 */}
                 <Tooltip 
-                  labelFormatter={(value, name, props) => formatTooltipLabel(value, name, props)}
+                  labelFormatter={(value, name) => formatTooltipLabel(value, name)}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '13px' }}
                 />
                 
@@ -210,7 +153,7 @@ const Dashboard = () => {
   );
 };
 
-// スタイル定義
+// スタイル定義（変更なし）
 const cardStyle = { backgroundColor: 'white', padding: '14px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' };
 const labelStyle = { color: '#64748b', fontSize: '0.75rem', marginBottom: '4px', fontWeight: '500', margin: 0 };
 const valueStyle = { fontSize: '1.6rem', fontWeight: '900', color: '#1e293b', lineHeight: '1', margin: 0 };
