@@ -1,8 +1,70 @@
 import React, { useMemo } from 'react';
 import { useSensorData } from '../hooks/useSensorData';
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine, Tooltip, ReferenceDot
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine, Tooltip, Customized
 } from 'recharts';
+
+/**
+ * 【絶対表示のための究極の解決策】
+ * Rechartsが計算した画面上の生のSVG座標(x, y)を直接引っこ抜いて
+ * 最高・最低気温のドットとテキストを強制的に描画するカスタムレイヤーです。
+ */
+const AbsoluteMaxMinLabels = (props) => {
+  const { formattedGraphicalItems, width } = props;
+  
+  // 画面上に描画されている線のデータを取得
+  const points = formattedGraphicalItems?.[0]?.props?.points;
+  if (!points || points.length === 0) return null;
+
+  // 配列の中から数値として純粋に「最高」「最低」の座標点を特定
+  let maxP = points[0];
+  let minP = points[0];
+
+  for (let i = 1; i < points.length; i++) {
+    if (Number(points[i].value) > Number(maxP.value)) maxP = points[i];
+    if (Number(points[i].value) < Number(minP.value)) minP = points[i];
+  }
+
+  // 右端の壁（グラフ全体の85%以上の位置）にいる場合は、テキストを左側に寄せて見切れを防ぐ
+  const isMaxRightEdge = maxP.x > width * 0.85;
+  const isMinRightEdge = minP.x > width * 0.85;
+
+  return (
+    <g id="absolute-max-min-labels" style={{ pointerEvents: 'none' }}>
+      {/* 1. 最高気温のピンポイント描画 */}
+      <circle cx={maxP.x} cy={maxP.y} r={6} fill="#f43f5e" stroke="#fff" strokeWidth={3} />
+      <text
+        x={maxP.x}
+        y={maxP.y}
+        dx={isMaxRightEdge ? -12 : 12}
+        dy={-15} // 点の少し上に配置
+        fill="#f43f5e"
+        fontSize={16}
+        fontWeight="900"
+        textAnchor={isMaxRightEdge ? "end" : "start"}
+        style={{ paintOrder: 'stroke', stroke: '#fff', strokeWidth: '4px', strokeLinejoin: 'round' }}
+      >
+        最高 {maxP.value}℃
+      </text>
+
+      {/* 2. 最低気温のピンポイント描画 */}
+      <circle cx={minP.x} cy={minP.y} r={6} fill="#0ea5e9" stroke="#fff" strokeWidth={3} />
+      <text
+        x={minP.x}
+        y={minP.y}
+        dx={isMinRightEdge ? -12 : 12}
+        dy={25} // 点の少し下に配置
+        fill="#0ea5e9"
+        fontSize={16}
+        fontWeight="900"
+        textAnchor={isMinRightEdge ? "end" : "start"}
+        style={{ paintOrder: 'stroke', stroke: '#fff', strokeWidth: '4px', strokeLinejoin: 'round' }}
+      >
+        最低 {minP.value}℃
+      </text>
+    </g>
+  );
+};
 
 const CornProduct = () => {
   const baseUrl = import.meta.env.BASE_URL || "/";
@@ -19,43 +81,10 @@ const CornProduct = () => {
 
   const { data: rawData, stats, loading } = useSensorData(yesterdayString, yesterdayString);
 
-  // 1. データを時間順にソートし、最高・最低点のオブジェクトを特定
-  const { chartData, maxPoint, minPoint } = useMemo(() => {
-    if (!rawData || rawData.length === 0) return { chartData: [], maxPoint: null, minPoint: null };
-    const sorted = [...rawData].sort((a, b) => a.time.localeCompare(b.time));
-    
-    // stats.max/min と一致する最初のデータ点を探す
-    const maxP = sorted.find(d => d.temp === stats.max);
-    const minP = sorted.find(d => d.temp === stats.min);
-    
-    return { chartData: sorted, maxPoint: maxP, minPoint: minP };
-  }, [rawData, stats]);
-
-  /**
-   * カスタムラベル描画関数
-   */
-  const renderLabel = (props, type) => {
-    const { cx, cy, value } = props;
-    const isMax = type === 'max';
-    // 右端付近（全データの90%以降）なら文字を左に寄せる
-    const isRightEdge = chartData.indexOf(isMax ? maxPoint : minPoint) > chartData.length * 0.8;
-
-    return (
-      <text 
-        x={cx} 
-        y={cy} 
-        dx={isRightEdge ? -12 : 12} 
-        dy={isMax ? -15 : 25} 
-        fill={isMax ? "#f43f5e" : "#0ea5e9"}
-        fontSize={16} 
-        fontWeight="900"
-        textAnchor={isRightEdge ? "end" : "start"}
-        style={{ paintOrder: 'stroke', stroke: '#fff', strokeWidth: '4px', strokeLinejoin: 'round' }}
-      >
-        {isMax ? '最高' : '最低'} {value}℃
-      </text>
-    );
-  };
+  const chartData = useMemo(() => {
+    if (!rawData || rawData.length === 0) return [];
+    return [...rawData].sort((a, b) => a.time.localeCompare(b.time));
+  }, [rawData]);
 
   if (loading && rawData.length === 0) {
     return <div style={{ textAlign: 'center', padding: '100px', color: '#666' }}>データを読み込み中...</div>;
@@ -90,8 +119,8 @@ const CornProduct = () => {
           <div style={{ width: '100%', height: '450px' }}>
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                {/* 修正点：right: 0 で余白をなくし、topを広げてラベルスペースを確保 */}
-                <AreaChart data={chartData} margin={{ top: 50, right: 0, left: -25, bottom: 0 }}>
+                {/* right: 0 で完全に右端を詰め、top: 40 で上部に文字が入る隙間を作ります */}
+                <AreaChart data={chartData} margin={{ top: 40, right: 0, left: -25, bottom: 0 }}>
                   <defs>
                     <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
@@ -100,15 +129,14 @@ const CornProduct = () => {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   
-                  {/* 修正点：padding right を 0 にして右端まで線を伸ばす */}
                   <XAxis 
                     dataKey="time" 
                     tick={{fontSize: 11, fill: '#64748b', fontWeight: 'bold'}} 
                     dy={10} 
                     padding={{ left: 0, right: 0 }}
                   />
-                  {/* Y軸の幅を広げてラベルが上下に切れないようにする */}
-                  <YAxis domain={['dataMin - 7', 'dataMax + 7']} hide />
+                  {/* ラベルが上下のクリッピングで消されないよう、グラフ内部の上下幅にゆとりを持たせる */}
+                  <YAxis domain={['dataMin - 6', 'dataMax + 6']} hide />
                   
                   <Tooltip
                     contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: '8px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', fontSize: '14px', fontWeight: 'bold' }}
@@ -127,29 +155,11 @@ const CornProduct = () => {
                     isAnimationActive={false} 
                   />
 
-                  {/* 解決策：ReferenceDotを使用してラベルを「強制描画」 */}
-                  {maxPoint && (
-                    <ReferenceDot 
-                      x={maxPoint.time} 
-                      y={maxPoint.temp} 
-                      r={6} 
-                      fill="#f43f5e" 
-                      stroke="#fff" 
-                      strokeWidth={3}
-                      label={(props) => renderLabel(props, 'max')}
-                    />
-                  )}
-                  {minPoint && (
-                    <ReferenceDot 
-                      x={minPoint.time} 
-                      y={minPoint.temp} 
-                      r={6} 
-                      fill="#0ea5e9" 
-                      stroke="#fff" 
-                      strokeWidth={3}
-                      label={(props) => renderLabel(props, 'min')}
-                    />
-                  )}
+                  {/* 今回のコアとなる修正：
+                    Rechartsの標準機能をバイパスして、計算されたグラフィック要素の上に直接ラベルレイヤーを割り込ませます。
+                  */}
+                  <Customized component={AbsoluteMaxMinLabels} />
+
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
