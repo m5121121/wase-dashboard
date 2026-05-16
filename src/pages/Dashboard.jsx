@@ -16,27 +16,31 @@ const Dashboard = () => {
     stats 
   } = useSensorData();
 
-  // 2. 💡【最重要】ダッシュボード側だけで管理する「ローカルな日付ステート」を新設します。
-  // これにより、カスタムフック内部が勝手に日付を書き戻しても、カレンダーの文字は絶対に影響を受けません。
-  const [localStartDate, setLocalStartDate] = useState('2026-05-15');
-  const [localEndDate, setLocalEndDate] = useState('2026-05-15');
+  // 2. 💡初期値を最新データの「2026-05-16」に設定し、完全に独立したステートで管理します
+  const [localStartDate, setLocalStartDate] = useState('2026-05-16');
+  const [localEndDate, setLocalEndDate] = useState('2026-05-16');
 
-  // 3. 初回読み込み時にフック側の初期値が存在していれば、ローカルのステートに同期させる
+  // 3. 💡フック側の強制書き戻しによるバグを防ぐため、初回起動時のみ同期させます
   useEffect(() => {
     if (startDate) setLocalStartDate(startDate);
     if (endDate) setLocalEndDate(endDate);
-  }, [startDate, endDate]);
+  }, []); // 空配列にすることで、初回以外はカレンダーの文字が勝手に戻らなくなります
 
   // 4. 「表示」ボタンを押した時の処理
   const handleDisplayClick = () => {
-    // フック側の日付をローカルの値で上書き
     setStartDate(localStartDate);
     setEndDate(localEndDate);
     
-    // 少しだけタイミングをずらして（Stateが確実に更新されてから）データを再取得
+    // 状態が確実に反映されてからデータ再取得をかけるため、わずかに遅延を入れます
     setTimeout(() => {
       fetchData();
     }, 50);
+  };
+
+  // 5. 💡ホバー（ツールチップ）時のタイトルを「日付 + 時間」の形式に整形する関数
+  const formatTooltipLabel = (timeLabel) => {
+    // localStartDate (例: "2026-05-16") とデータの時間 (例: "12:00") を結合
+    return `${localStartDate} ${timeLabel}`;
   };
 
   return (
@@ -52,7 +56,6 @@ const Dashboard = () => {
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
           <input 
             type="date" 
-            // 💡 フックの値ではなく、ダッシュボード側の独立したStateを結びつけるので100%文字が変わります
             value={localStartDate} 
             onChange={(e) => setLocalStartDate(e.target.value)} 
             style={inputStyle}
@@ -64,7 +67,6 @@ const Dashboard = () => {
             onChange={(e) => setLocalEndDate(e.target.value)} 
             style={inputStyle}
           />
-          {/* 💡 独自に作成したクリック関数を呼び出します */}
           <button onClick={handleDisplayClick} style={buttonStyle}>表示</button>
         </div>
       </header>
@@ -85,13 +87,13 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* グラフコンテナ（白い外枠カード）左右の余白を完全排除 */}
+      {/* グラフコンテナ */}
       <div style={graphContainerStyle}>
         <div style={{ padding: '0 16px 10px 16px', borderBottom: '1px solid #f1f5f9', marginBottom: '10px' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 'bold', margin: 0 }}>気温・湿度推移</h2>
         </div>
 
-        {/* グラフ描画エリア：幅100% */}
+        {/* グラフ描画エリア */}
         <div style={{ width: '100%', height: '420px' }}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 10, right: -12, left: -32, bottom: 0 }}>
@@ -119,10 +121,13 @@ const Dashboard = () => {
               <YAxis yAxisId="left" stroke="#f43f5e" fontSize={10} tickLine={false} axisLine={false} unit="℃" />
               <YAxis yAxisId="right" orientation="right" stroke="#0ea5e9" fontSize={10} tickLine={false} axisLine={false} unit="%" />
               
+              {/* 💡 labelFormatter を指定して、ホバー時に日時（YYYY-MM-DD HH:MM）で表示されるようにします */}
               <Tooltip 
+                labelFormatter={formatTooltipLabel}
                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '13px' }}
               />
               
+              {/* 気温レイヤー */}
               <Area 
                 yAxisId="left" 
                 type="monotone" 
@@ -134,6 +139,7 @@ const Dashboard = () => {
                 name="気温" 
               />
               
+              {/* 湿度レイヤー */}
               <Area 
                 yAxisId="right" 
                 type="monotone" 
@@ -152,7 +158,7 @@ const Dashboard = () => {
   );
 };
 
-// スタイル定義（変更なし）
+// スタイル定義
 const cardStyle = { backgroundColor: 'white', padding: '14px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' };
 const labelStyle = { color: '#64748b', fontSize: '0.75rem', marginBottom: '4px', fontWeight: '500', margin: 0 };
 const valueStyle = { fontSize: '1.6rem', fontWeight: '900', color: '#1e293b', lineHeight: '1', margin: 0 };
