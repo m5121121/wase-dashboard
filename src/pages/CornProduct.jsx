@@ -5,62 +5,63 @@ import {
 } from 'recharts';
 
 /**
- * 【絶対表示のための究極の解決策】
- * Rechartsが計算した画面上の生のSVG座標(x, y)を直接引っこ抜いて
- * 最高・最低気温のドットとテキストを強制的に描画するカスタムレイヤーです。
+ * 【100%表示確定】物理座標ハック用レイヤー
+ * データの型やプロパティ名に一切依存せず、画面に描画された線の「一番上」と「一番下」を直接掴みます。
  */
 const AbsoluteMaxMinLabels = (props) => {
-  const { formattedGraphicalItems, width } = props;
+  const { formattedGraphicalItems, width, maxVal, minVal } = props;
   
-  // 画面上に描画されている線のデータを取得
-  const points = formattedGraphicalItems?.[0]?.props?.points;
+  // 描画されているグラフの線（Area）の生の頂点座標配列を見つける
+  const graphItem = formattedGraphicalItems?.find(item => item?.props?.points);
+  const points = graphItem?.props?.points;
+  
   if (!points || points.length === 0) return null;
 
-  // 配列の中から数値として純粋に「最高」「最低」の座標点を特定
+  // SVG座標系では「yが小さいほど画面の上（最高値）」「yが大きいほど画面の下（最低値）」になります
   let maxP = points[0];
   let minP = points[0];
 
   for (let i = 1; i < points.length; i++) {
-    if (Number(points[i].value) > Number(maxP.value)) maxP = points[i];
-    if (Number(points[i].value) < Number(minP.value)) minP = points[i];
+    if (points[i].y < maxP.y) maxP = points[i];
+    if (points[i].y > minP.y) minP = points[i];
   }
 
-  // 右端の壁（グラフ全体の85%以上の位置）にいる場合は、テキストを左側に寄せて見切れを防ぐ
+  // 右端（グラフ全体の85%以降）に点がある場合は、テキストを左側に寄せて見切れを防止
   const isMaxRightEdge = maxP.x > width * 0.85;
   const isMinRightEdge = minP.x > width * 0.85;
 
   return (
-    <g id="absolute-max-min-labels" style={{ pointerEvents: 'none' }}>
-      {/* 1. 最高気温のピンポイント描画 */}
+    <g id="absolute-forced-labels" style={{ pointerEvents: 'none' }}>
+      {/* 1. 最高気温のドットとテキスト */}
       <circle cx={maxP.x} cy={maxP.y} r={6} fill="#f43f5e" stroke="#fff" strokeWidth={3} />
       <text
         x={maxP.x}
         y={maxP.y}
         dx={isMaxRightEdge ? -12 : 12}
-        dy={-15} // 点の少し上に配置
+        dy={-15}
         fill="#f43f5e"
         fontSize={16}
         fontWeight="900"
         textAnchor={isMaxRightEdge ? "end" : "start"}
         style={{ paintOrder: 'stroke', stroke: '#fff', strokeWidth: '4px', strokeLinejoin: 'round' }}
       >
-        最高 {maxP.value}℃
+        最高 {maxVal}℃
       </text>
 
-      {/* 2. 最低気温のピンポイント描画 */}
+      {/* 2. 最低気温のドットとテキスト */}
       <circle cx={minP.x} cy={minP.y} r={6} fill="#0ea5e9" stroke="#fff" strokeWidth={3} />
       <text
         x={minP.x}
         y={minP.y}
         dx={isMinRightEdge ? -12 : 12}
-        dy={25} // 点の少し下に配置
+        dy={25}
         fill="#0ea5e9"
         fontSize={16}
         fontWeight="900"
         textAnchor={isMinRightEdge ? "end" : "start"}
         style={{ paintOrder: 'stroke', stroke: '#fff', strokeWidth: '4px', strokeLinejoin: 'round' }}
       >
-        最低 {minP.value}℃
+        最低 {minVal}℃
       </text>
     </g>
   );
@@ -109,7 +110,7 @@ const CornProduct = () => {
             </h3>
             
             <div style={{ backgroundColor: '#ea580c', color: 'white', padding: '10px 18px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>昨日の寒暖差</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>昨日の寒寒差</span>
               <span style={{ fontSize: '1.8rem', fontWeight: '900' }}>
                 {chartData.length > 0 ? stats.diff : '--'}<small style={{fontSize: '1rem'}}>℃</small>
               </span>
@@ -119,7 +120,6 @@ const CornProduct = () => {
           <div style={{ width: '100%', height: '450px' }}>
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                {/* right: 0 で完全に右端を詰め、top: 40 で上部に文字が入る隙間を作ります */}
                 <AreaChart data={chartData} margin={{ top: 40, right: 0, left: -25, bottom: 0 }}>
                   <defs>
                     <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
@@ -135,7 +135,6 @@ const CornProduct = () => {
                     dy={10} 
                     padding={{ left: 0, right: 0 }}
                   />
-                  {/* ラベルが上下のクリッピングで消されないよう、グラフ内部の上下幅にゆとりを持たせる */}
                   <YAxis domain={['dataMin - 6', 'dataMax + 6']} hide />
                   
                   <Tooltip
@@ -155,10 +154,10 @@ const CornProduct = () => {
                     isAnimationActive={false} 
                   />
 
-                  {/* 今回のコアとなる修正：
-                    Rechartsの標準機能をバイパスして、計算されたグラフィック要素の上に直接ラベルレイヤーを割り込ませます。
-                  */}
-                  <Customized component={AbsoluteMaxMinLabels} />
+                  {/* 解決策: インライン関数を使って、フックから得た確実な数値をカスタム描画レイヤーへ注入します */}
+                  <Customized component={(props) => (
+                    <AbsoluteMaxMinLabels {...props} maxVal={stats.max} minVal={stats.min} />
+                  )} />
 
                 </AreaChart>
               </ResponsiveContainer>
