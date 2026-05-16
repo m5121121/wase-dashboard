@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useSensorData } from '../hooks/useSensorData'; 
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
 
 const Dashboard = () => {
-  // フックから日付状態（startDate, endDate）と変更関数（setStartDate, setEndDate）を取得
+  // フックの状態と関数をそのまま使います
   const { 
     data, 
     startDate, 
@@ -15,13 +15,6 @@ const Dashboard = () => {
     fetchData, 
     stats 
   } = useSensorData();
-
-  // ──【変更点】画面が初めて開いたときに、初期値として 2026-05-15 をセットする ──
-  useEffect(() => {
-    // コンポーネント読み込み時にフック側の状態を初期化
-    if (!startDate) setStartDate('2026-05-15');
-    if (!endDate) setEndDate('2026-05-15');
-  }, []);
 
   return (
     <div style={{ padding: '12px', backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'sans-serif' }}>
@@ -36,18 +29,19 @@ const Dashboard = () => {
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
           <input 
             type="date" 
+            // 💡 value をフックの状態と完全同期させます。
+            // 最初だけ空文字になってカレンダーがバグるのを防ぐため、フォールバックとして '2026-05-15' を設定します。
             value={startDate || '2026-05-15'} 
-            onChange={(e) => setStartDate(e.target.value)} // ここでフックの状態を直接変更します
+            onChange={(e) => setStartDate(e.target.value)} 
             style={inputStyle}
           />
           <span style={{ color: '#64748b', fontSize: '0.9rem' }}>〜</span>
           <input 
             type="date" 
             value={endDate || '2026-05-15'} 
-            onChange={(e) => setEndDate(e.target.value)} // ここでフックの状態を直接変更します
+            onChange={(e) => setEndDate(e.target.value)} 
             style={inputStyle}
           />
-          {/* ボタンクリックで、更新された日付を元にデータを再取得 */}
           <button onClick={fetchData} style={buttonStyle}>表示</button>
         </div>
       </header>
@@ -68,14 +62,12 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* グラフコンテナ（白い外枠カード）左右の余白をカット */}
+      {/* グラフコンテナ */}
       <div style={graphContainerStyle}>
-        {/* 「※M5Stack(ENV III)〜」の文言を完全に排除 */}
         <div style={{ padding: '0 16px 10px 16px', borderBottom: '1px solid #f1f5f9', marginBottom: '10px' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 'bold', margin: 0 }}>気温・湿度推移</h2>
         </div>
 
-        {/* グラフ描画エリア */}
         <div style={{ width: '100%', height: '420px' }}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 10, right: -12, left: -32, bottom: 0 }}>
@@ -136,7 +128,7 @@ const Dashboard = () => {
   );
 };
 
-// スタイル定義（変更なし）
+// スタイル定義
 const cardStyle = { backgroundColor: 'white', padding: '14px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' };
 const labelStyle = { color: '#64748b', fontSize: '0.75rem', marginBottom: '4px', fontWeight: '500', margin: 0 };
 const valueStyle = { fontSize: '1.6rem', fontWeight: '900', color: '#1e293b', lineHeight: '1', margin: 0 };
