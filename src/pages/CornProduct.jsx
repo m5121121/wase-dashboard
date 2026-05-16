@@ -5,14 +5,14 @@ import {
 } from 'recharts';
 
 /**
- * 【2軸対応・文字サイズ20px】最高・最低気温のカスタムラベル
+ * 【復活版・文字サイズ20px】最高・最低気温のカスタムラベル
  */
 const CustomMaxMinDot = (props) => {
   const { cx, cy, index, maxIndex, minIndex, maxVal, minVal, dataLength } = props;
 
   // 1. 最高気温の点
   if (index === maxIndex) {
-    const isRightEdge = index > dataLength * 0.85; // 右端での文字切れ対策
+    const isRightEdge = index > dataLength * 0.85; // 右端付近での文字切れ防止
     return (
       <g id="dashboard-max-label">
         <circle cx={cx} cy={cy} r={7} fill="#f43f5e" stroke="#fff" strokeWidth={3} />
@@ -35,7 +35,7 @@ const CustomMaxMinDot = (props) => {
 
   // 2. 最低気温の点
   if (index === minIndex) {
-    const isRightEdge = index > dataLength * 0.85; // 右端での文字切れ対策
+    const isRightEdge = index > dataLength * 0.85; // 右端付近での文字切れ防止
     return (
       <g id="dashboard-min-label">
         <circle cx={cx} cy={cy} r={7} fill="#0ea5e9" stroke="#fff" strokeWidth={3} />
@@ -65,7 +65,7 @@ const Dashboard = () => {
     fetchData, stats 
   } = useSensorData();
 
-  // data 配列から最高・最低気温のインデックスを確実に特定
+  // データ配列から最高・最低気温のインデックス（位置）を計算
   const { maxIndex, minIndex } = useMemo(() => {
     if (!data || data.length === 0) return { maxIndex: -1, minIndex: -1 };
     let maxIdx = 0;
@@ -79,14 +79,15 @@ const Dashboard = () => {
 
   return (
     <div style={{ padding: '12px', backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      {/* ヘッダーセクション（スマホ時は縦並び、PC時は横並び） */}
-      <header style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'space-between', alignItems: 'stretch' }}>
+      
+      {/* ヘッダー：スマホでも絶対に崩れないフレックス配置 */}
+      <header style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center', alignItems: 'center' }}>
         <h1 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#1e293b', margin: 0, textAlign: 'center' }}>
           🚜 裏磐梯農園 管理ダッシュボード
         </h1>
         
-        {/* 日付選択コントロール（スマホでもタップしやすいよう横幅いっぱいに広げる） */}
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'center' }}>
+        {/* 日付コントロール */}
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
           <input 
             type="date" 
             value={startDate} 
@@ -104,8 +105,8 @@ const Dashboard = () => {
         </div>
       </header>
 
-      {/* 統計カードセクション（スマホは1列、PCなど幅広画面は自動でグリッド配置） */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+      {/* 統計カード：スマホは横2列スクイーズ、寒暖差は最下部にワイド配置 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '20px' }}>
         <div style={cardStyle}>
           <p style={labelStyle}>最高気温</p>
           <p style={valueStyle}>{stats.max} <span style={unitStyle}>℃</span></p>
@@ -114,24 +115,24 @@ const Dashboard = () => {
           <p style={labelStyle}>最低気温</p>
           <p style={valueStyle}>{stats.min} <span style={unitStyle}>℃</span></p>
         </div>
-        <div style={{...cardStyle, borderLeft: '5px solid #ea580c', background: '#fff7ed', gridColumn: 'span 2 / span 2'}}>
+        <div style={{...cardStyle, borderLeft: '5px solid #ea580c', background: '#fff7ed', gridColumn: 'span 2'}}>
           <p style={{...labelStyle, color: '#c2410c'}}>寒暖差（最大-最小）</p>
           <p style={{...valueStyle, color: '#ea580c'}}>{stats.diff} <span style={unitStyle}>℃</span></p>
         </div>
       </div>
 
-      {/* グラフコンテナ（パディングを左右0にして端まで広げる） */}
+      {/* グラフ外枠：左右のパディングを完全にゼロにしてスマホ画面いっぱいに広げる */}
       <div style={graphContainerStyle}>
-        <div style={{ padding: '0 12px 12px 12px', display: 'flex', flexDirection: 'column', gap: '4px', borderBottom: '1px solid #f1f5f9', marginBottom: '15px' }}>
+        <div style={{ padding: '0 16px 12px 16px', display: 'flex', flexDirection: 'column', gap: '4px', borderBottom: '1px solid #f1f5f9', marginBottom: '15px' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 'bold', margin: 0 }}>気温・湿度推移</h2>
           <div style={{ fontSize: '0.75rem', color: '#64748b' }}>※M5Stack(ENV III)からのリアルタイムデータ</div>
         </div>
 
-        {/* グラフ描画エリア */}
-        <div style={{ width: '100%', height: '400px', position: 'relative' }}>
+        {/* グラフ描画コンテナ */}
+        <div style={{ width: '100%', height: '400px' }}>
           <ResponsiveContainer width="100%" height="100%">
-            {/* 左右の margin をネガティブ値（-20）に調整して、無駄な余白を完全にシャットアウト */}
-            <AreaChart data={data} margin={{ top: 45, right: -20, left: -20, bottom: 0 }}>
+            {/* 1軸にしたため、左右のマージンを -10 程度にするだけで完全に画面端まで広がります */}
+            <AreaChart data={data} margin={{ top: 45, right: -10, left: -10, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.15}/>
@@ -144,28 +145,27 @@ const Dashboard = () => {
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
               
-              {/* paddingを設定して、左右の端のドットが隠れないようにマージンを内部確保 */}
+              {/* X軸の文字サイズと余白調整 */}
               <XAxis 
                 dataKey="time" 
                 stroke="#64748b" 
                 fontSize={10} 
                 tickLine={false} 
                 axisLine={false}
-                dy={6}
-                padding={{ left: 15, right: 15 }}
+                dy={8}
+                padding={{ left: 20, right: 20 }}
               />
               
-              {/* スマホ画面を広く使うため、左右の目盛り(YAxis)は非表示(hide)にします（数値はラベルとTooltipで分かるため） */}
-              <YAxis yAxisId="left" domain={['dataMin - 3', 'dataMax + 4']} hide />
-              <YAxis yAxisId="right" orientation="right" hide />
+              {/* 余白を殺す原因だった YAxis を1つのみにし、かつ完全に hide します */}
+              <YAxis domain={['dataMin - 3', 'dataMax + 4']} hide />
               
+              {/* タップ時に気温と湿度が両方バッチリ見えるポップアップ */}
               <Tooltip 
-                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '12px' }}
+                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '13px' }}
               />
               
-              {/* 気温グラフ: yAxisId="left" に連動させ、最高・最低ラベルを確実に描画 */}
+              {/* 気温レイヤー：1軸に統合。最高・最低ラベルを上部に絶対描画 */}
               <Area 
-                yAxisId="left" 
                 type="monotone" 
                 dataKey="temp" 
                 stroke="#f43f5e" 
@@ -186,9 +186,8 @@ const Dashboard = () => {
                 )}
               />
               
-              {/* 湿度グラフ: yAxisId="right" に連動。ドットはなし */}
+              {/* 湿度レイヤー：同じ軸で重ねて描画。ドットはなし */}
               <Area 
-                yAxisId="right" 
                 type="monotone" 
                 dataKey="humi" 
                 stroke="#0ea5e9" 
@@ -206,16 +205,15 @@ const Dashboard = () => {
   );
 };
 
-// スマホ最適化スタイルの定義
-const cardStyle = { backgroundColor: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' };
-const labelStyle = { color: '#64748b', fontSize: '0.8rem', marginBottom: '4px', fontWeight: '500', margin: 0 };
-const valueStyle = { fontSize: '1.7rem', fontWeight: '900', color: '#1e293b', lineHeight: '1', margin: 0 };
-const unitStyle = { fontSize: '0.9rem', fontWeight: 'normal', marginLeft: '2px' };
+// スタイル定義（スマホでの見やすさを追求）
+const cardStyle = { backgroundColor: 'white', padding: '14px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' };
+const labelStyle = { color: '#64748b', fontSize: '0.75rem', marginBottom: '4px', fontWeight: '500', margin: 0 };
+const valueStyle = { fontSize: '1.6rem', fontWeight: '900', color: '#1e293b', lineHeight: '1', margin: 0 };
+const unitStyle = { fontSize: '0.85rem', fontWeight: 'normal', marginLeft: '2px' };
 
-// グラフの外枠の左右パディングを0にして、画面幅いっぱいに広げられるように修正
 const graphContainerStyle = { backgroundColor: 'white', padding: '16px 0px 8px 0px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', overflow: 'hidden' };
 
-const inputStyle = { padding: '8px 6px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem', width: '33%', maxWidth: '130px', textAlign: 'center', backgroundColor: '#fff' };
-const buttonStyle = { padding: '8px 14px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' };
+const inputStyle = { padding: '8px 4px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem', width: '32%', maxWidth: '120px', textAlign: 'center', backgroundColor: '#fff', webkitAppearance: 'none' };
+const buttonStyle = { padding: '8px 12px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem', flexShrink: 0 };
 
 export default Dashboard;
