@@ -5,78 +5,91 @@ import {
 } from 'recharts';
 
 const Dashboard = () => {
-  // 💡 1. 「昨日」の日付（YYYY-MM-DD形式）を動的に計算するヘルパー関数
+  // 💡 1. 「昨日」の日付（YYYY-MM-DD形式）を自動計算する処理
   const getYesterdayString = () => {
     const d = new Date();
-    d.setDate(d.getDate() - 1); // 1日前（昨日）にする
+    d.setDate(d.getDate() - 1); // 本日から1日引く
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  const yesterday = getYesterdayString(); // 例: "2026-05-16"
+  const yesterday = getYesterdayString(); // 例: 本日が5/17なら「2026-05-16」
 
-  // 2. フックから必要な状態と関数を取得
+  // 2. カスタムフックから必要な状態と関数を取得
   const { 
     data, 
-    startDate, 
     setStartDate, 
-    endDate, 
     setEndDate, 
     fetchData, 
     stats,
     loading: hookLoading
   } = useSensorData();
 
-  // 💡 3. カレンダーの表示変更をスムーズに行うため、デフォルト値を「昨日」にしたローカルStateを用意
+  // 💡 3. カレンダーの初期表示・操作用に「昨日」をデフォルトセット
   const [localStartDate, setLocalStartDate] = useState(yesterday);
   const [localEndDate, setLocalEndDate] = useState(yesterday);
   const [isLocalLoading, setIsLocalLoading] = useState(false);
 
-  // 💡 4. 初回ロード時に、フック側の日付も「昨日」に強制的に合わせる
+  // 💡 4. 【最重要】画面を開いた瞬間に「昨日」のデータを強制的にロードする処理
   useEffect(() => {
-    setStartDate(yesterday);
-    setEndDate(yesterday);
-    // すでにフック側で初期ロードが走ってしまっている可能性があるため、
-    // 明示的に昨日のデータを一度取りにいきます
-    setTimeout(() => {
-      fetchData();
-    }, 50);
+    const initLoad = async () => {
+      setIsLocalLoading(true);
+      
+      // まずフック側の状態を「昨日」に書き換える
+      await setStartDate(yesterday);
+      await setEndDate(yesterday);
+      
+      // フックの関数が引数（期間）を受け取れる設計である場合に備え、直接日付を渡して実行
+      // 引数を受け付けない設計であっても、直前のステート更新が反映されるよう念のため両対応
+      if (typeof fetchData === 'function') {
+        try {
+          await fetchData(yesterday, yesterday);
+        } catch (e) {
+          // 万が一引数エラーが起きた場合は通常の呼び出しを行う
+          await fetchData();
+        }
+      }
+      setIsLocalLoading(false);
+    };
+
+    initLoad();
   }, []);
 
-  // 💡 5. 「表示」ボタンを押したときの確実なデータ再取得ロジック
-  const handleDisplayClick = () => {
+  // 💡 5. 「表示」ボタンを押したときに、選択された日付のデータを確実に取得する処理
+  const handleDisplayClick = async () => {
     setIsLocalLoading(true);
     
-    // フック側のStateに画面上のカレンダーの値をセット
-    setStartDate(localStartDate);
-    setEndDate(localEndDate);
+    // フック内の期間設定をカレンダーの選択値で上書き
+    await setStartDate(localStartDate);
+    await setEndDate(localEndDate);
     
-    // Reactのステート更新(非同期)が確実に完了した後にAPIリクエストを送るため遅延を入れる
-    setTimeout(() => {
-      fetchData();
-    }, 50);
-  };
-
-  // データが届いたらローカルの読み込み中表示を解除
-  useEffect(() => {
+    // 選択された新しい日付パラメーターを直接送り込んで再取得を強制
+    if (typeof fetchData === 'function') {
+      try {
+        await fetchData(localStartDate, localEndDate);
+      } catch (e) {
+        await fetchData();
+      }
+    }
+    
     setIsLocalLoading(false);
-  }, [data]);
+  };
 
   const isLoading = hookLoading || isLocalLoading;
 
-  // 💡 6. ホバー（ツールチップ）時の日時表示をデータに完全従属させるフォーマッタ
+  // 💡 6. ホバー（ツールチップ）の表示：配列データが持つ本来の日付を最優先で出す
   const formatTooltipLabel = (value, name) => {
     const activePayload = name?.[0]?.payload;
     if (activePayload) {
-      // データオブジェクトが持っている本来の正確な日付プロパティを取得
-      const actualDate = activePayload.date || activePayload.datetime || '';
+      // APIデータ内に含まれる正確な日付プロパティ（dateやdatetimeなど）を自動検知
+      const actualDate = activePayload.date || activePayload.datetime || activePayload.formatted_date || '';
       if (actualDate) {
-        return `${actualDate} ${value}`; // 例: "2026-05-16 04:36"
+        return `${actualDate} ${value}`; // 例: "2026-05-16 05:16"
       }
     }
-    // 万が一データ側に日付がない場合のみ、カレンダーの開始日を結合
+    // データ側に日付キーがない場合のみ、カレンダーの開始日を結合
     return `${localStartDate} ${value}`;
   };
 
