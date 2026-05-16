@@ -1,28 +1,28 @@
 import React, { useMemo } from 'react';
 import { useSensorData } from '../hooks/useSensorData';
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine, Tooltip
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
 
 /**
- * 最高・最低気温のカスタムラベル（文字サイズ拡大版）
+ * 【文字サイズ20px版】最高・最低気温のカスタムラベルコンポーネント
  */
 const CustomMaxMinDot = (props) => {
   const { cx, cy, index, maxIndex, minIndex, maxVal, minVal, dataLength } = props;
 
-  // 1. 最高気温の点（文字サイズを大きく調整）
+  // 1. 最高気温の点
   if (index === maxIndex) {
-    const isRightEdge = index > dataLength * 0.85;
+    const isRightEdge = index > dataLength * 0.85; // 右端での文字切れ対策
     return (
-      <g id="forced-max-label">
+      <g id="dashboard-max-label">
         <circle cx={cx} cy={cy} r={7} fill="#f43f5e" stroke="#fff" strokeWidth={3} />
         <text
           x={cx}
           y={cy}
-          dx={isRightEdge ? -15 : 15} // 文字サイズに合わせて余白を少し拡大
-          dy={-18}                   // 文字がドットに被らないよう少し上に引き上げ
+          dx={isRightEdge ? -15 : 15}
+          dy={-18}
           fill="#f43f5e"
-          fontSize={20}              // ★15から20にサイズアップ！
+          fontSize={20}
           fontWeight="900"
           textAnchor={isRightEdge ? "end" : "start"}
           style={{ paintOrder: 'stroke', stroke: '#fff', strokeWidth: '4px', strokeLinejoin: 'round' }}
@@ -33,19 +33,19 @@ const CustomMaxMinDot = (props) => {
     );
   }
 
-  // 2. 最低気温の点（文字サイズを大きく調整）
+  // 2. 最低気温の点
   if (index === minIndex) {
-    const isRightEdge = index > dataLength * 0.85;
+    const isRightEdge = index > dataLength * 0.85; // 右端での文字切れ対策
     return (
-      <g id="forced-min-label">
+      <g id="dashboard-min-label">
         <circle cx={cx} cy={cy} r={7} fill="#0ea5e9" stroke="#fff" strokeWidth={3} />
         <text
           x={cx}
           y={cy}
-          dx={isRightEdge ? -15 : 15} // 文字サイズに合わせて余白を少し拡大
-          dy={32}                    // 文字が大きくなった分、少し下側に余裕を持たせる
+          dx={isRightEdge ? -15 : 15}
+          dy={32}
           fill="#0ea5e9"
-          fontSize={20}              // ★15から20にサイズアップ！
+          fontSize={20}
           fontWeight="900"
           textAnchor={isRightEdge ? "end" : "start"}
           style={{ paintOrder: 'stroke', stroke: '#fff', strokeWidth: '4px', strokeLinejoin: 'round' }}
@@ -59,123 +59,132 @@ const CustomMaxMinDot = (props) => {
   return null;
 };
 
-const CornProduct = () => {
-  const baseUrl = import.meta.env.BASE_URL || "/";
-  const heroImagePath = `${baseUrl}corn-hero.jpg`;
+const Dashboard = () => {
+  const { 
+    data, startDate, setStartDate, endDate, setEndDate, 
+    fetchData, stats 
+  } = useSensorData();
 
-  const yesterdayString = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  }, []);
-
-  const { data: rawData, stats, loading } = useSensorData(yesterdayString, yesterdayString);
-
-  const chartData = useMemo(() => {
-    if (!rawData || rawData.length === 0) return [];
-    return [...rawData].sort((a, b) => a.time.localeCompare(b.time));
-  }, [rawData]);
-
+  // 現在の data 配列から「最高気温」「最低気温」のインデックス（何番目か）を確実に特定する
   const { maxIndex, minIndex } = useMemo(() => {
-    if (!chartData || chartData.length === 0) return { maxIndex: -1, minIndex: -1 };
+    if (!data || data.length === 0) return { maxIndex: -1, minIndex: -1 };
     let maxIdx = 0;
     let minIdx = 0;
-    for (let i = 1; i < chartData.length; i++) {
-      if (chartData[i].temp > chartData[maxIdx].temp) maxIdx = i;
-      if (chartData[i].temp < chartData[minIdx].temp) minIdx = i;
+    for (let i = 1; i < data.length; i++) {
+      if (data[i].temp > data[maxIdx].temp) maxIdx = i;
+      if (data[i].temp < data[minIdx].temp) minIdx = i;
     }
     return { maxIndex: maxIdx, minIndex: minIdx };
-  }, [chartData]);
-
-  if (loading && rawData.length === 0) {
-    return <div style={{ textAlign: 'center', padding: '100px', color: '#666' }}>データを読み込み中...</div>;
-  }
+  }, [data]);
 
   return (
-    <div style={{ fontFamily: 'sans-serif', color: '#333', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
-      
-      <div style={{ position: 'relative', height: '320px', backgroundImage: `url("${heroImagePath}")`, backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#444' }}>
-        <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.15)' }} />
-        <h1 style={{ color: '#000', fontSize: 'clamp(1.8rem, 7vw, 3.8rem)', fontWeight: '900', zIndex: 1, textShadow: '2px 2px 0 #fff, -2px -2px 0 #fff, 0 0 10px rgba(0,0,0,0.2)' }}>
-          裏磐梯ゴールドラッシュ
+    <div style={{ padding: '20px', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
+      <header style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1e293b' }}>
+          🚜 裏磐梯農園 管理ダッシュボード
         </h1>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <input 
+            type="date" 
+            value={startDate} 
+            onChange={(e) => setStartDate(e.target.value)} 
+            style={inputStyle}
+          />
+          <span style={{ color: '#64748b' }}>〜</span>
+          <input 
+            type="date" 
+            value={endDate} 
+            onChange={(e) => setEndDate(e.target.value)} 
+            style={inputStyle}
+          />
+          <button onClick={fetchData} style={buttonStyle}>表示</button>
+        </div>
+      </header>
+
+      {/* 統計カードセクション */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+        <div style={cardStyle}>
+          <p style={labelStyle}>最高気温</p>
+          <p style={valueStyle}>{stats.max} <span style={unitStyle}>℃</span></p>
+        </div>
+        <div style={cardStyle}>
+          <p style={labelStyle}>最低気温</p>
+          <p style={valueStyle}>{stats.min} <span style={unitStyle}>℃</span></p>
+        </div>
+        <div style={{...cardStyle, borderLeft: '5px solid #ea580c', background: '#fff7ed'}}>
+          <p style={{...labelStyle, color: '#c2410c'}}>寒暖差（最大-最小）</p>
+          <p style={{...valueStyle, color: '#ea580c'}}>{stats.diff} <span style={unitStyle}>℃</span></p>
+        </div>
       </div>
 
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '20px 10px' }}>
-        <div style={{ backgroundColor: '#fff', padding: '25px 0px', borderRadius: '16px', boxShadow: '0 4px 25px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-          
-          <div style={{ padding: '0 15px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '15px', marginBottom: '30px' }}>
-            <h3 style={{ fontSize: '1.2rem', color: '#1e293b', fontWeight: 'bold', borderLeft: '6px solid #f43f5e', paddingLeft: '12px', margin: 0 }}>
-              24時間の気温変化 <small style={{ fontWeight: 'normal', fontSize: '0.8rem', color: '#64748b', display: 'block' }}>{yesterdayString}</small>
-            </h3>
-            
-            <div style={{ backgroundColor: '#ea580c', color: 'white', padding: '10px 18px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>昨日の寒暖差</span>
-              <span style={{ fontSize: '1.8rem', fontWeight: '900' }}>
-                {chartData.length > 0 ? stats.diff : '--'}<small style={{fontSize: '1rem'}}>℃</small>
-              </span>
-            </div>
-          </div>
-          
-          <div style={{ width: '100%', height: '450px' }}>
-            {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 40, right: 15, left: -25, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  
-                  <XAxis 
-                    dataKey="time" 
-                    tick={{fontSize: 11, fill: '#64748b', fontWeight: 'bold'}} 
-                    dy={10} 
+      {/* グラフセクション */}
+      <div style={graphContainerStyle}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: '600' }}>気温・湿度推移</h2>
+          <div style={{ fontSize: '0.85rem', color: '#64748b' }}>※M5Stack(ENV III)からのリアルタイムデータ</div>
+        </div>
+        <div style={{ width: '100%', height: '450px' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            {/* margin.top を 40 に広げて大きな文字が上に切れないように調整 */}
+            <AreaChart data={data} margin={{ top: 40, right: 30, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="colorHumi" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+              <XAxis dataKey="time" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis yAxisId="left" stroke="#f43f5e" fontSize={12} tickLine={false} axisLine={false} unit="℃" />
+              <YAxis yAxisId="right" orientation="right" stroke="#0ea5e9" fontSize={12} tickLine={false} axisLine={false} unit="%" />
+              <Tooltip 
+                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+              />
+              
+              {/* 気温のAreaコンポーネントの dot 属性にカスタム関数を注入。バグ回避のためアニメーションはオフにします */}
+              <Area 
+                yAxisId="left" 
+                type="monotone" 
+                dataKey="temp" 
+                stroke="#f43f5e" 
+                strokeWidth={3} 
+                fillOpacity={1} 
+                fill="url(#colorTemp)" 
+                name="気温" 
+                isAnimationActive={false}
+                dot={(props) => (
+                  <CustomMaxMinDot 
+                    {...props} 
+                    maxIndex={maxIndex} 
+                    minIndex={minIndex} 
+                    maxVal={stats.max} 
+                    minVal={stats.min} 
+                    dataLength={data.length} 
                   />
-                  <YAxis domain={['dataMin - 5', 'dataMax + 5']} hide />
-                  
-                  <Tooltip
-                    contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: '8px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', fontSize: '14px', fontWeight: 'bold' }}
-                    formatter={(val) => [`${val} ℃`, '気温']}
-                  />
-
-                  <ReferenceLine y={stats.max} stroke="#f43f5e" strokeWidth={1} strokeDasharray="4 4" />
-                  <ReferenceLine y={stats.min} stroke="#0ea5e9" strokeWidth={1} strokeDasharray="4 4" />
-
-                  <Area 
-                    type="monotone" 
-                    dataKey="temp" 
-                    stroke="#f43f5e" 
-                    strokeWidth={4} 
-                    fill="url(#tempGradient)"
-                    isAnimationActive={false} 
-                    dot={(props) => (
-                      <CustomMaxMinDot 
-                        {...props} 
-                        maxIndex={maxIndex} 
-                        minIndex={minIndex} 
-                        maxVal={stats.max} 
-                        minVal={stats.min} 
-                        dataLength={chartData.length} 
-                      />
-                    )}
-                  />
-
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>データが存在しません</div>
-            )}
-          </div>
+                )}
+              />
+              
+              {/* 湿度はドットなしのまま維持 */}
+              <Area yAxisId="right" type="monotone" dataKey="humi" stroke="#0ea5e9" strokeWidth={3} fillOpacity={1} fill="url(#colorHumi)" name="湿度" />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
   );
 };
 
-export default CornProduct;
+// スタイル定義
+const cardStyle = { backgroundColor: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' };
+const labelStyle = { color: '#64748b', fontSize: '0.9rem', marginBottom: '8px', fontWeight: '500' };
+const valueStyle = { fontSize: '2.2rem', fontWeight: 'bold', color: '#1e293b', lineHeight: '1' };
+const unitStyle = { fontSize: '1.1rem', fontWeight: 'normal', marginLeft: '4px' };
+const graphContainerStyle = { backgroundColor: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' };
+const inputStyle = { padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.9rem' };
+const buttonStyle = { padding: '8px 20px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' };
+
+export default Dashboard;
