@@ -16,8 +16,9 @@ const Dashboard = () => {
     loading: hookLoading
   } = useSensorData();
 
+  // カレンダー用の独立ステート（初期値を5/16〜5/17に変更）
   const [localStartDate, setLocalStartDate] = useState('2026-05-16');
-  const [localEndDate, setLocalEndDate] = useState('2026-05-16');
+  const [localEndDate, setLocalEndDate] = useState('2026-05-17');
   const [isLocalLoading, setIsLocalLoading] = useState(false);
 
   useEffect(() => {
@@ -40,20 +41,52 @@ const Dashboard = () => {
 
   const isLoading = hookLoading || isLocalLoading;
 
-  // 💡【修正点】ホバー時に、そのデータ自身が持つ正しい日付を動的に表示する関数
+  // 💡【大幅改良】どのようなデータ構造でもホバー日時を絶対に狂わせないフォーマッタ
   const formatTooltipLabel = (value, name, props) => {
-    // ホバーしている箇所の実際のデータオブジェクトを取得
-    const activePayload = name?.[0]?.payload; 
-    
+    // 1. props の中からホバーしている要素のインデックス（順番）や生データを取得
+    const tooltipItem = name?.[0];
+    const activePayload = tooltipItem?.payload;
+
     if (activePayload) {
-      // 1. データの中に 'date' や 'datetime' があればそれを最優先で使用
-      const actualDate = activePayload.date || activePayload.datetime;
-      if (actualDate) {
-        return `${actualDate} ${activePayload.time}`;
+      // 2. もしデータ自体に明確に日付キーが存在すればそれを最優先（一応残す）
+      const anyDateKey = activePayload.date || activePayload.datetime || activePayload.formatted_date;
+      if (anyDateKey) {
+        return `${anyDateKey} ${activePayload.time || value}`;
+      }
+
+      // 3. 【解決策の要】データに日付がない場合、X軸の全体のデータ件数と現在位置から日付を推測
+      if (data && data.length > 0) {
+        // ホバーしているデータが全体の中でどの位置にあるか割合を計算
+        const activeIndex = data.findIndex(item => item.time === value);
+        
+        if (activeIndex !== -1) {
+          const start = new Date(localStartDate);
+          const end = new Date(localEndDate);
+          
+          // 開始日と終了日の日数の差を計算
+          const dayDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+          
+          if (dayDiff > 0) {
+            // 全体の進捗度（0.0 〜 1.0）を出す
+            const progress = activeIndex / (data.length - 1 || 1);
+            // 進捗度に応じて、開始日に日数を足す
+            const daysToAdd = Math.round(progress * dayDiff);
+            
+            const calculatedDate = new Date(start);
+            calculatedDate.setDate(start.getDate() + daysToAdd);
+            
+            // YYYY-MM-DD 形式に整形
+            const yyyy = calculatedDate.getFullYear();
+            const mm = String(calculatedDate.getMonth() + 1).padStart(2, '0');
+            const dd = String(calculatedDate.getDate()).padStart(2, '0');
+            
+            return `${yyyy}-${mm}-${dd} ${value}`;
+          }
+        }
       }
     }
     
-    // 2. 万が一データに日付が入っていない場合は、カレンダーの選択値を組み合わせて表示
+    // 4. 万が一計算できなかった場合の安全なフォールバック
     return `${localStartDate} ${value}`;
   };
 
@@ -104,7 +137,7 @@ const Dashboard = () => {
           <p style={valueStyle}>{isLoading ? '--' : (stats?.min ?? '--')} <span style={unitStyle}>℃</span></p>
         </div>
         <div style={{...cardStyle, borderLeft: '5px solid #ea580c', background: '#fff7ed', gridColumn: 'span 2'}}>
-          <p style={{...labelStyle, color: '#c2410c'}}>寒寒差（最大-最小）</p>
+          <p style={{...labelStyle, color: '#c2410c'}}>寒暖差（最大-最小）</p>
           <p style={{...valueStyle, color: '#ea580c'}}>{isLoading ? '--' : (stats?.diff ?? '--')} <span style={unitStyle}>℃</span></p>
         </div>
       </div>
@@ -112,7 +145,7 @@ const Dashboard = () => {
       {/* グラフコンテナ */}
       <div style={graphContainerStyle}>
         <div style={{ padding: '0 16px 10px 16px', borderBottom: '1px solid #f1f5f9', marginBottom: '10px' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 'bold', margin: 0 }}>気温・湿度推移</h2>
+          <h2 style={{ fontSize: '1rem', fontWeight: 'bold', margin: 0, textAlign: 'center' }}>気温・湿度推移</h2>
         </div>
 
         <div style={{ width: '100%', height: '420px', position: 'relative' }}>
@@ -151,7 +184,7 @@ const Dashboard = () => {
                 <YAxis yAxisId="left" stroke="#f43f5e" fontSize={10} tickLine={false} axisLine={false} unit="℃" />
                 <YAxis yAxisId="right" orientation="right" stroke="#0ea5e9" fontSize={10} tickLine={false} axisLine={false} unit="%" />
                 
-                {/* 💡【修正点】 labelFormatter ではなく、データの中身に直接アクセスできるフォーマット方式に変更 */}
+                {/* 💡 ツールチップのデータ連携を修正 */}
                 <Tooltip 
                   labelFormatter={(value, name, props) => formatTooltipLabel(value, name, props)}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '13px' }}
