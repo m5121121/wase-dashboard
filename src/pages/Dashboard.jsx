@@ -15,7 +15,7 @@ const Dashboard = () => {
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  const yesterday = getYesterdayString(); // 例: 本日が5/17なら「2026-05-16」
+  const yesterday = getYesterdayString();
 
   // 2. カスタムフックから必要な状態と関数を取得
   const { 
@@ -27,27 +27,23 @@ const Dashboard = () => {
     loading: hookLoading
   } = useSensorData();
 
-  // 💡 3. カレンダーの初期表示・操作用に「昨日」をデフォルトセット
+  // 3. カレンダーの初期表示・操作用に「昨日」をデフォルトセット
   const [localStartDate, setLocalStartDate] = useState(yesterday);
   const [localEndDate, setLocalEndDate] = useState(yesterday);
   const [isLocalLoading, setIsLocalLoading] = useState(false);
 
-  // 💡 4. 【最重要】画面を開いた瞬間に「昨日」のデータを強制的にロードする処理
+  // 4. 画面を開いた瞬間に「昨日」のデータを強制的にロードする処理
   useEffect(() => {
     const initLoad = async () => {
       setIsLocalLoading(true);
       
-      // まずフック側の状態を「昨日」に書き換える
       await setStartDate(yesterday);
       await setEndDate(yesterday);
       
-      // フックの関数が引数（期間）を受け取れる設計である場合に備え、直接日付を渡して実行
-      // 引数を受け付けない設計であっても、直前のステート更新が反映されるよう念のため両対応
       if (typeof fetchData === 'function') {
         try {
           await fetchData(yesterday, yesterday);
         } catch (e) {
-          // 万が一引数エラーが起きた場合は通常の呼び出しを行う
           await fetchData();
         }
       }
@@ -57,15 +53,13 @@ const Dashboard = () => {
     initLoad();
   }, []);
 
-  // 💡 5. 「表示」ボタンを押したときに、選択された日付のデータを確実に取得する処理
+  // 5. 「表示」ボタンを押したときの処理
   const handleDisplayClick = async () => {
     setIsLocalLoading(true);
     
-    // フック内の期間設定をカレンダーの選択値で上書き
     await setStartDate(localStartDate);
     await setEndDate(localEndDate);
     
-    // 選択された新しい日付パラメーターを直接送り込んで再取得を強制
     if (typeof fetchData === 'function') {
       try {
         await fetchData(localStartDate, localEndDate);
@@ -79,18 +73,13 @@ const Dashboard = () => {
 
   const isLoading = hookLoading || isLocalLoading;
 
-  // 💡 6. ホバー（ツールチップ）の表示：配列データが持つ本来の日付を最優先で出す
-  const formatTooltipLabel = (value, name) => {
-    const activePayload = name?.[0]?.payload;
-    if (activePayload) {
-      // APIデータ内に含まれる正確な日付プロパティ（dateやdatetimeなど）を自動検知
-      const actualDate = activePayload.date || activePayload.datetime || activePayload.formatted_date || '';
-      if (actualDate) {
-        return `${actualDate} ${value}`; // 例: "2026-05-16 05:16"
-      }
+  // 💡 6. 【ここを修正】データ側の壊れた日付を無視し、選択されている終了日の日付を強制適用する
+  const formatTooltipLabel = (value) => {
+    // 選択された終了日（例: "2026-05-17"）と、ホバーされた時間の値（例: "05:16"）を安全に結合します
+    if (localEndDate && value) {
+      return `${localEndDate} ${value}`;
     }
-    // データ側に日付キーがない場合のみ、カレンダーの開始日を結合
-    return `${localStartDate} ${value}`;
+    return value;
   };
 
   return (
@@ -124,7 +113,7 @@ const Dashboard = () => {
             disabled={isLoading} 
             style={{...buttonStyle, backgroundColor: isLoading ? '#94a3b8' : '#16a34a'}}
           >
-            {isLoading ? '読込中...' : '表示'}
+            {loading ? '読込中...' : '表示'}
           </button>
         </div>
       </header>
@@ -188,7 +177,8 @@ const Dashboard = () => {
                 <YAxis yAxisId="right" orientation="right" stroke="#0ea5e9" fontSize={10} tickLine={false} axisLine={false} unit="%" />
                 
                 <Tooltip 
-                  labelFormatter={(value, name) => formatTooltipLabel(value, name)}
+                  // 💡 修正した日付フォーマッタを適用
+                  labelFormatter={formatTooltipLabel}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '13px' }}
                 />
                 
