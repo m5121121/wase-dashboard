@@ -70,30 +70,20 @@ const Dashboard = () => {
   // 読み込み状態の統合
   const isLoading = hookLoading || isLocalLoading;
 
-  // 💡 6. 【超重要】複数日対応のスマート日付ジェネレータ
+  // 6. 複数日対応のスマート日付ジェネレータ
   const formatTooltipLabel = (value, items) => {
-    // ホバーした点の生データ（payload）を抽出
     const activePayload = items?.[0]?.payload;
-    
     if (activePayload && data && data.length > 0) {
-      // 全データ配列の中で、今ホバーしているデータが何番目にあるかを検索
       const index = data.findIndex(item => item === activePayload);
-      
       if (index !== -1) {
-        // 開始日と終了日が同じ（1日だけの表示）なら無条件で開始日
         if (localStartDate === localEndDate) {
           return `${localStartDate} ${value}`;
         }
-
-        // 💡 複数日（例: 2日間）のデータである場合
-        // データの半分より前なら「開始日」、後半なら「終了日」として賢くマッピング
         const halfLength = data.length / 2;
         const targetDate = index < halfLength ? localStartDate : localEndDate;
         return `${targetDate} ${value}`;
       }
     }
-    
-    // 万が一判定に失敗した場合は安全策として終了日を結合
     return localEndDate ? `${localEndDate} ${value}` : value;
   };
 
@@ -133,19 +123,31 @@ const Dashboard = () => {
         </div>
       </header>
 
-      {/* 統計カードセクション */}
+      {/* 💡 統計カードセクション：ここに色付けを行いました */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '16px' }}>
-        <div style={cardStyle}>
-          <p style={labelStyle}>最高気温</p>
-          <p style={valueStyle}>{isLoading ? '--' : (stats?.max ?? '--')} <span style={unitStyle}>℃</span></p>
+        
+        {/* 🔥 最高気温カード（赤系にデザイン変更） */}
+        <div style={{...cardStyle, borderLeft: '5px solid #f43f5e', background: '#fff1f2'}}>
+          <p style={{...labelStyle, color: '#be123c'}}>最高気温</p>
+          <p style={{...valueStyle, color: '#9f1239'}}>
+            {isLoading ? '--' : (stats?.max ?? '--')} <span style={unitStyle}>℃</span>
+          </p>
         </div>
-        <div style={cardStyle}>
-          <p style={labelStyle}>最低気温</p>
-          <p style={valueStyle}>{isLoading ? '--' : (stats?.min ?? '--')} <span style={unitStyle}>℃</span></p>
+        
+        {/* ❄️ 最低気温カード（青系にデザイン変更） */}
+        <div style={{...cardStyle, borderLeft: '5px solid #0ea5e9', background: '#f0f9ff'}}>
+          <p style={{...labelStyle, color: '#0369a1'}}>最低気温</p>
+          <p style={{...valueStyle, color: '#075985'}}>
+            {isLoading ? '--' : (stats?.min ?? '--')} <span style={unitStyle}>℃</span>
+          </p>
         </div>
+        
+        {/* 💥 寒暖差カード（オレンジ系・既存流用） */}
         <div style={{...cardStyle, borderLeft: '5px solid #ea580c', background: '#fff7ed', gridColumn: 'span 2'}}>
           <p style={{...labelStyle, color: '#c2410c'}}>寒暖差（最大-最小）</p>
-          <p style={{...valueStyle, color: '#ea580c'}}>{isLoading ? '--' : (stats?.diff ?? '--')} <span style={unitStyle}>℃</span></p>
+          <p style={{...valueStyle, color: '#ea580c'}}>
+            {isLoading ? '--' : (stats?.diff ?? '--')} <span style={unitStyle}>℃</span>
+          </p>
         </div>
       </div>
 
@@ -192,7 +194,6 @@ const Dashboard = () => {
                 <YAxis yAxisId="right" orientation="right" stroke="#0ea5e9" fontSize={10} tickLine={false} axisLine={false} unit="%" />
                 
                 <Tooltip 
-                  // 💡 第2引数(items)を利用して時系列の位置を割り振るようアップデート
                   labelFormatter={(value, items) => formatTooltipLabel(value, items)}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '13px' }}
                 />
@@ -217,10 +218,10 @@ const Dashboard = () => {
   );
 };
 
-// スタイル定義（変更なし）
-const cardStyle = { backgroundColor: 'white', padding: '14px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' };
-const labelStyle = { color: '#64748b', fontSize: '0.75rem', marginBottom: '4px', fontWeight: '500', margin: 0 };
-const valueStyle = { fontSize: '1.6rem', fontWeight: '900', color: '#1e293b', lineHeight: '1', margin: 0 };
+// スタイルベース（個別の色指定はコンポーネント内でインライン上書きしています）
+const cardStyle = { padding: '14px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' };
+const labelStyle = { fontSize: '0.75rem', marginBottom: '4px', fontWeight: '500', margin: 0 };
+const valueStyle = { fontSize: '1.6rem', fontWeight: '900', lineHeight: '1', margin: 0 };
 const unitStyle = { fontSize: '0.85rem', fontWeight: 'normal', marginLeft: '2px' };
 const graphContainerStyle = { backgroundColor: 'white', padding: '14px 0px 8px 0px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', overflow: 'hidden' };
 const inputStyle = { padding: '8px 4px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem', width: '32%', maxWidth: '120px', textAlign: 'center', backgroundColor: '#fff', webkitAppearance: 'none' };
