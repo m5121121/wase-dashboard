@@ -71,9 +71,10 @@ const Dashboard = () => {
     setIsLocalLoading(false);
   };
 
+  // hookLoading と isLocalLoading を合算した正しいローカル変数
   const isLoading = hookLoading || isLocalLoading;
 
-  // 💡 6. 【ここを修正】データ側の壊れた日付を無視し、選択されている終了日の日付を強制適用する
+  // 💡 6. データ側の壊れた日付を無視し、選択されている終了日の日付を強制適用する
   const formatTooltipLabel = (value) => {
     // 選択された終了日（例: "2026-05-17"）と、ホバーされた時間の値（例: "05:16"）を安全に結合します
     if (localEndDate && value) {
@@ -108,12 +109,13 @@ const Dashboard = () => {
             disabled={isLoading}
             style={inputStyle}
           />
+          {/* 💡 エラーの原因だった loading をすべて isLoading に修正完了 */}
           <button 
             onClick={handleDisplayClick} 
             disabled={isLoading} 
             style={{...buttonStyle, backgroundColor: isLoading ? '#94a3b8' : '#16a34a'}}
           >
-            {loading ? '読込中...' : '表示'}
+            {isLoading ? '読込中...' : '表示'}
           </button>
         </div>
       </header>
@@ -177,7 +179,6 @@ const Dashboard = () => {
                 <YAxis yAxisId="right" orientation="right" stroke="#0ea5e9" fontSize={10} tickLine={false} axisLine={false} unit="%" />
                 
                 <Tooltip 
-                  // 💡 修正した日付フォーマッタを適用
                   labelFormatter={formatTooltipLabel}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '13px' }}
                 />
@@ -202,7 +203,7 @@ const Dashboard = () => {
   );
 };
 
-// スタイル定義（変更なし）
+// スタイル定義
 const cardStyle = { backgroundColor: 'white', padding: '14px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' };
 const labelStyle = { color: '#64748b', fontSize: '0.75rem', marginBottom: '4px', fontWeight: '500', margin: 0 };
 const valueStyle = { fontSize: '1.6rem', fontWeight: '900', color: '#1e293b', lineHeight: '1', margin: 0 };
