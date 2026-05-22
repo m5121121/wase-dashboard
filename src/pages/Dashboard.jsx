@@ -5,10 +5,10 @@ import {
 } from 'recharts';
 
 const Dashboard = () => {
-  // 💡 1. 「昨日」の日付（YYYY-MM-DD形式）を自動計算する処理
+  // 1. 「昨日」の日付（YYYY-MM-DD形式）を自動計算する処理
   const getYesterdayString = () => {
     const d = new Date();
-    d.setDate(d.getDate() - 1); // 本日から1日引く
+    d.setDate(d.getDate() - 1); 
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
@@ -36,7 +36,6 @@ const Dashboard = () => {
   useEffect(() => {
     const initLoad = async () => {
       setIsLocalLoading(true);
-      
       await setStartDate(yesterday);
       await setEndDate(yesterday);
       
@@ -49,14 +48,12 @@ const Dashboard = () => {
       }
       setIsLocalLoading(false);
     };
-
     initLoad();
   }, []);
 
   // 5. 「表示」ボタンを押したときの処理
   const handleDisplayClick = async () => {
     setIsLocalLoading(true);
-    
     await setStartDate(localStartDate);
     await setEndDate(localEndDate);
     
@@ -67,20 +64,37 @@ const Dashboard = () => {
         await fetchData();
       }
     }
-    
     setIsLocalLoading(false);
   };
 
-  // hookLoading と isLocalLoading を合算した正しいローカル変数
+  // 読み込み状態の統合
   const isLoading = hookLoading || isLocalLoading;
 
-  // 💡 6. データ側の壊れた日付を無視し、選択されている終了日の日付を強制適用する
-  const formatTooltipLabel = (value) => {
-    // 選択された終了日（例: "2026-05-17"）と、ホバーされた時間の値（例: "05:16"）を安全に結合します
-    if (localEndDate && value) {
-      return `${localEndDate} ${value}`;
+  // 💡 6. 【超重要】複数日対応のスマート日付ジェネレータ
+  const formatTooltipLabel = (value, items) => {
+    // ホバーした点の生データ（payload）を抽出
+    const activePayload = items?.[0]?.payload;
+    
+    if (activePayload && data && data.length > 0) {
+      // 全データ配列の中で、今ホバーしているデータが何番目にあるかを検索
+      const index = data.findIndex(item => item === activePayload);
+      
+      if (index !== -1) {
+        // 開始日と終了日が同じ（1日だけの表示）なら無条件で開始日
+        if (localStartDate === localEndDate) {
+          return `${localStartDate} ${value}`;
+        }
+
+        // 💡 複数日（例: 2日間）のデータである場合
+        // データの半分より前なら「開始日」、後半なら「終了日」として賢くマッピング
+        const halfLength = data.length / 2;
+        const targetDate = index < halfLength ? localStartDate : localEndDate;
+        return `${targetDate} ${value}`;
+      }
     }
-    return value;
+    
+    // 万が一判定に失敗した場合は安全策として終了日を結合
+    return localEndDate ? `${localEndDate} ${value}` : value;
   };
 
   return (
@@ -109,7 +123,6 @@ const Dashboard = () => {
             disabled={isLoading}
             style={inputStyle}
           />
-          {/* 💡 エラーの原因だった loading をすべて isLoading に修正完了 */}
           <button 
             onClick={handleDisplayClick} 
             disabled={isLoading} 
@@ -179,7 +192,8 @@ const Dashboard = () => {
                 <YAxis yAxisId="right" orientation="right" stroke="#0ea5e9" fontSize={10} tickLine={false} axisLine={false} unit="%" />
                 
                 <Tooltip 
-                  labelFormatter={formatTooltipLabel}
+                  // 💡 第2引数(items)を利用して時系列の位置を割り振るようアップデート
+                  labelFormatter={(value, items) => formatTooltipLabel(value, items)}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '13px' }}
                 />
                 
@@ -203,7 +217,7 @@ const Dashboard = () => {
   );
 };
 
-// スタイル定義
+// スタイル定義（変更なし）
 const cardStyle = { backgroundColor: 'white', padding: '14px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' };
 const labelStyle = { color: '#64748b', fontSize: '0.75rem', marginBottom: '4px', fontWeight: '500', margin: 0 };
 const valueStyle = { fontSize: '1.6rem', fontWeight: '900', color: '#1e293b', lineHeight: '1', margin: 0 };
