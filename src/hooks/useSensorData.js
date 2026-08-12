@@ -1,24 +1,19 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 
 /**
- * GAS（Google Apps Script）から観測データを取得するカスタムフック
- * 
- * @param {string} startDate - 開始日 (例: "2026-08-01")
- * @param {string} endDate   - 終了日 (例: "2026-08-11")
- * @returns {{ data: Array, loading: boolean, error: Error|null, refetch: Function }}
+ * GASまたは気象庁連携APIから観測データを取得するカスタムフック
  */
-export function useSensorData(startDate, endDate) {
+export function useSensorData(initialStartDate, initialEndDate) {
   const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // 環境変数からGASエンドポイントを取得 (なければフォールバック用URL)
   const gasUrl = import.meta.env.VITE_GAS_URL || "";
 
-  const fetchData = useCallback(async () => {
+  // データ取得関数（日付を引数で受け取り可能に）
+  const fetchData = useCallback(async (startDate, endDate) => {
     if (!gasUrl) {
       console.warn("VITE_GAS_URL is not defined in environment variables.");
-      setLoading(false);
       return;
     }
 
@@ -37,23 +32,57 @@ export function useSensorData(startDate, endDate) {
       }
 
       const json = await response.json();
-      setData(json);
+
+      // 配列要素が { time: "12:00", temp: 22.5, humi: 60 } の形になるよう担保
+      // (GAS側のキー名が異なる場合はここでマッピングしてください)
+      const formattedData = json.map(item => ({
+        time: item.time || item.datetime || "",
+        temp: item.temp !== undefined ? Number(item.temp) : null,
+        humi: item.humi !== undefined ? Number(item.humi) : null,
+      }));
+
+      setData(formattedData);
     } catch (err) {
-      console.error("Failed to fetch sensor data:", err);
+      console.error("Failed to fetch weather/sensor data:", err);
       setError(err);
     } finally {
       setLoading(false);
     }
-  }, [gasUrl, startDate, endDate]);
+  }, [gasUrl]);
 
+  // 初回ロード
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (initialStartDate && initialEndDate) {
+      fetchData(initialStartDate, initialEndDate);
+    }
+  }, [initialStartDate, initialEndDate, fetchData]);
+
+  // 取得したdataから最高気温・最低気温・寒暖差(stats)を自動計算
+  const stats = useMemo(() => {
+    const validTemps = data
+      .map((d) => d.temp)
+      .filter((t) => t !== null && !isNaN(t));
+
+    if (validTemps.length === 0) {
+      return { max: "--", min: "--", diff: "--" };
+    }
+
+    const max = Math.max(...validTemps);
+    const min = Math.min(...validTemps);
+    const diff = (max - min).toFixed(1);
+
+    return {
+      max: max.toFixed(1),
+      min: min.toFixed(1),
+      diff: diff,
+    };
+  }, [data]);
 
   return {
     data,
+    stats,
     loading,
     error,
-    refetch: fetchData
+    fetchData,
   };
 }

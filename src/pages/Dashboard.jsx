@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 
 const Dashboard = () => {
-  // 1. 「昨日」の日付（YYYY-MM-DD形式）を自動計算する処理
+  // 1. 「昨日」の日付（YYYY-MM-DD形式）を取得
   const getYesterdayString = () => {
     const d = new Date();
     d.setDate(d.getDate() - 1); 
@@ -17,60 +17,24 @@ const Dashboard = () => {
 
   const yesterday = getYesterdayString();
 
-  // 2. カスタムフックから必要な状態と関数を取得
-  const { 
-    data, 
-    setStartDate, 
-    setEndDate, 
-    fetchData, 
-    stats,
-    loading: hookLoading
-  } = useSensorData();
-
-  // 3. カレンダーの初期表示・操作用に「昨日」をデフォルトセット
+  // カレンダーの初期表示用ステート
   const [localStartDate, setLocalStartDate] = useState(yesterday);
   const [localEndDate, setLocalEndDate] = useState(yesterday);
-  const [isLocalLoading, setIsLocalLoading] = useState(false);
 
-  // 4. 画面を開いた瞬間に「昨日」のデータを強制的にロードする処理
-  useEffect(() => {
-    const initLoad = async () => {
-      setIsLocalLoading(true);
-      await setStartDate(yesterday);
-      await setEndDate(yesterday);
-      
-      if (typeof fetchData === 'function') {
-        try {
-          await fetchData(yesterday, yesterday);
-        } catch (e) {
-          await fetchData();
-        }
-      }
-      setIsLocalLoading(false);
-    };
-    initLoad();
-  }, []);
+  // 2. カスタムフックを使用（初期値として昨日を渡す）
+  const { 
+    data, 
+    stats,
+    loading, 
+    fetchData 
+  } = useSensorData(yesterday, yesterday);
 
-  // 5. 「表示」ボタンを押したときの処理
-  const handleDisplayClick = async () => {
-    setIsLocalLoading(true);
-    await setStartDate(localStartDate);
-    await setEndDate(localEndDate);
-    
-    if (typeof fetchData === 'function') {
-      try {
-        await fetchData(localStartDate, localEndDate);
-      } catch (e) {
-        await fetchData();
-      }
-    }
-    setIsLocalLoading(false);
+  // 3. 「表示」ボタンを押したときの処理
+  const handleDisplayClick = () => {
+    fetchData(localStartDate, localEndDate);
   };
 
-  // 読み込み状態の統合
-  const isLoading = hookLoading || isLocalLoading;
-
-  // 6. 複数日対応のスマート日付ジェネレータ
+  // Tooltipラベル整形
   const formatTooltipLabel = (value, items) => {
     const activePayload = items?.[0]?.payload;
     if (activePayload && data && data.length > 0) {
@@ -93,7 +57,7 @@ const Dashboard = () => {
       {/* ヘッダーセクション */}
       <header style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center', alignItems: 'center' }}>
         <h1 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#1e293b', margin: 0, textAlign: 'center' }}>
-          🚜 裏磐梯農園 管理ダッシュボード
+          🌥️ 気象データ推移 ☔️
         </h1>
         
         {/* 日付選択コントロール */}
@@ -102,7 +66,7 @@ const Dashboard = () => {
             type="date" 
             value={localStartDate} 
             onChange={(e) => setLocalStartDate(e.target.value)} 
-            disabled={isLoading}
+            disabled={loading}
             style={inputStyle}
           />
           <span style={{ color: '#64748b', fontSize: '0.9rem' }}>〜</span>
@@ -110,43 +74,43 @@ const Dashboard = () => {
             type="date" 
             value={localEndDate} 
             onChange={(e) => setLocalEndDate(e.target.value)} 
-            disabled={isLoading}
+            disabled={loading}
             style={inputStyle}
           />
           <button 
             onClick={handleDisplayClick} 
-            disabled={isLoading} 
-            style={{...buttonStyle, backgroundColor: isLoading ? '#94a3b8' : '#16a34a'}}
+            disabled={loading} 
+            style={{...buttonStyle, backgroundColor: loading ? '#94a3b8' : '#16a34a'}}
           >
-            {isLoading ? '読込中...' : '表示'}
+            {loading ? '読込中...' : '表示'}
           </button>
         </div>
       </header>
 
-      {/* 💡 統計カードセクション：ここに色付けを行いました */}
+      {/* 統計カードセクション */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '16px' }}>
         
-        {/* 🔥 最高気温カード（赤系にデザイン変更） */}
+        {/* 最高気温カード */}
         <div style={{...cardStyle, borderLeft: '5px solid #f43f5e', background: '#fff1f2'}}>
           <p style={{...labelStyle, color: '#be123c'}}>最高気温</p>
           <p style={{...valueStyle, color: '#9f1239'}}>
-            {isLoading ? '--' : (stats?.max ?? '--')} <span style={unitStyle}>℃</span>
+            {loading ? '--' : (stats?.max ?? '--')} <span style={unitStyle}>℃</span>
           </p>
         </div>
         
-        {/* ❄️ 最低気温カード（青系にデザイン変更） */}
+        {/* 最低気温カード */}
         <div style={{...cardStyle, borderLeft: '5px solid #0ea5e9', background: '#f0f9ff'}}>
           <p style={{...labelStyle, color: '#0369a1'}}>最低気温</p>
           <p style={{...valueStyle, color: '#075985'}}>
-            {isLoading ? '--' : (stats?.min ?? '--')} <span style={unitStyle}>℃</span>
+            {loading ? '--' : (stats?.min ?? '--')} <span style={unitStyle}>℃</span>
           </p>
         </div>
         
-        {/* 💥 寒暖差カード（オレンジ系・既存流用） */}
+        {/* 寒暖差カード */}
         <div style={{...cardStyle, borderLeft: '5px solid #ea580c', background: '#fff7ed', gridColumn: 'span 2'}}>
           <p style={{...labelStyle, color: '#c2410c'}}>寒暖差（最大-最小）</p>
           <p style={{...valueStyle, color: '#ea580c'}}>
-            {isLoading ? '--' : (stats?.diff ?? '--')} <span style={unitStyle}>℃</span>
+            {loading ? '--' : (stats?.diff ?? '--')} <span style={unitStyle}>℃</span>
           </p>
         </div>
       </div>
@@ -159,7 +123,7 @@ const Dashboard = () => {
 
         <div style={{ width: '100%', height: '420px', position: 'relative' }}>
           
-          {isLoading ? (
+          {loading ? (
             <div style={loadingOverlayStyle}>
               <div style={spinnerStyle}></div>
               <p style={{ margin: '12px 0 0 0', fontSize: '0.9rem', color: '#64748b', fontWeight: '600' }}>
@@ -218,13 +182,13 @@ const Dashboard = () => {
   );
 };
 
-// スタイルベース（個別の色指定はコンポーネント内でインライン上書きしています）
+// スタイル定義
 const cardStyle = { padding: '14px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' };
 const labelStyle = { fontSize: '0.75rem', marginBottom: '4px', fontWeight: '500', margin: 0 };
 const valueStyle = { fontSize: '1.6rem', fontWeight: '900', lineHeight: '1', margin: 0 };
 const unitStyle = { fontSize: '0.85rem', fontWeight: 'normal', marginLeft: '2px' };
 const graphContainerStyle = { backgroundColor: 'white', padding: '14px 0px 8px 0px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', overflow: 'hidden' };
-const inputStyle = { padding: '8px 4px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem', width: '32%', maxWidth: '120px', textAlign: 'center', backgroundColor: '#fff', webkitAppearance: 'none' };
+const inputStyle = { padding: '8px 4px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem', width: '32%', maxWidth: '120px', textAlign: 'center', backgroundColor: '#fff' };
 const buttonStyle = { padding: '8px 12px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem', flexShrink: 0 };
 const loadingOverlayStyle = { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.85)', zIndex: 10 };
 const spinnerStyle = { width: '40px', height: '40px', border: '4px solid #f3f3f3', borderTop: '4px solid #16a34a', borderRadius: '50%', animation: 'spin 1s linear infinite' };
